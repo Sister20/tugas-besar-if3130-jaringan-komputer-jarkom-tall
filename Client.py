@@ -14,7 +14,6 @@ class Client:
     def run(self):
         self.running = True
 
-        # TODO: utilize appropriate protocols and types, handshake goes here
         self.send_broadcast("DISCOVER")
         local_address, local_port = self.socket.getsockname()
         Logger.alert(f"Client started. Local address: {local_address}, Local port: {local_port}")
@@ -23,13 +22,17 @@ class Client:
         self.server_address = server_address
 
         Logger.alert(f"Received response from server at {self.server_address[0]}:{self.server_address[1]}")
-        Logger.alert(f"{response.decode()}")
+        Logger.alert(f"Response: {response.decode()}")
 
-        # TODO: utilize appropriate protocols and types, file transfer goes here
+        # TODO: utilize appropriate protocols and types, handshake goes here
         response, server_address = self.receive_data()
-        if(response.decode() == "DONE"):
-            Logger.critical(f"Server finished, stopping")
-            self.stop()
+        # TODO: utilize appropriate protocols and types, file transfer goes here
+        while(response.decode() != "DONE"):
+            response, server_address = self.receive_data()
+            if(response.decode() == "DONE"):
+                Logger.critical(f"Server finished, stopping")
+                self.stop()
+
 
     # TODO: utilize appropriate protocols and types
     def send_broadcast(self, message:str):

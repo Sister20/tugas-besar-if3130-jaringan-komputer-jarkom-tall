@@ -12,30 +12,37 @@ class Server:
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         self.socket.bind((self.address, self.port))
         self.served_filepath = served_filepath
-        self.client_sockets = []
+        self.client_list = []
 
     def server_loop(self):
         while self.running:
 
-            #TODO: utilize appropriate protocols and types, handshake goes here
             data, client_address = self.socket.recvfrom(1024)
-            self.client_sockets.append(client_address)
+            self.client_list.append(client_address)
             Logger.alert(f"Received request from {client_address[0]}:{client_address[1]}, data: {data.decode()}")
-            self.socket.sendto('Connection Accepted'.encode(), client_address)
+            self.socket.sendto('OFFER'.encode(), client_address)
             
             continue_input = ''
             while not continue_input in ['y', 'n']:
                 accept = Logger.input("Listen more? (y/n)")
                 if accept == 'n':
-                    #TODO: utilize appropriate protocols and types, file sending goes here
-                    for client in self.client_sockets:
+                    print("\nClient list:")
+                    for i, client in enumerate(self.client_list):
+                        print(f"{i + 1}. {client[0]}:{client[1]}")
+                    
+                    print("")
+                    for client in self.client_list:
+                        #TODO: utilize appropriate protocols and types, handshake goes here
+                        self.socket.sendto('HANDSHAKE'.encode(), client)
+                        
+                        #TODO: utilize appropriate protocols and types, file sending goes here
                         self.socket.sendto('DONE'.encode(), client)
 
                     Logger.critical("Server finished sending files. Stopping")
                     self.stop()
                     break
                 elif accept == 'y':
-                    continue
+                    break
                 else:
                     Logger.alert("Invalid input!")
 
