@@ -32,4 +32,7 @@ class Connection:
             self.handler.args = message
             self.handler.start()
             self.handler.join()
-            
+
+    def setTimeout(self, time_seconds:int):
+        self.__socket.settimeout(time_seconds)
+

@@ -40,6 +40,7 @@ class Server(Node):
                     self.stop()
                     break
                 elif accept == 'y':
+                    self.__connection.send("WAIT".encode(), client_address[0], client_address[1])
                     break
                 else:
                     Logger.alert("Invalid input!")
