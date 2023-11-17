@@ -23,22 +23,20 @@ class Client(Node):
                              Segment(0, 0, 0, "DISCOVER".encode())
                              ))
             data, server_address = self.__connection.listen()
-            data, checksum = Segment.unpack(data)
-            string_data = data.payload.decode().strip('\x00')
+            data, checksum = Segment.unpack_str_payload(data)
 
             Logger.alert(f"Received response from server at {server_address[0]}:{server_address[1]}")
-            Logger.alert(f"Response: {data.payload.decode()}")
+            Logger.alert(f"Response: {data.payload}")
 
             # If the server replied, we may establish connection and hence timeout is set for longer
             self.__connection.setTimeout(300)
 
             # TODO: utilize appropriate protocols and types, file transfer and handshake goes here
-            while(string_data != "DONE"):
+            while(data.payload != "DONE"):
                 data, server_address = self.__connection.listen()
-                data, checksum = Segment.unpack(data)
-                string_data = data.payload.decode().strip('\x00')
-                Logger.alert(f"Response: {string_data}")
-                if(string_data == "DONE"):
+                data, checksum = Segment.unpack_str_payload(data)
+                Logger.alert(f"Response: {data.payload}")
+                if(data.payload == "DONE"):
                     Logger.critical(f"Server finished, stopping")
                     self.stop()
         except TimeoutError:

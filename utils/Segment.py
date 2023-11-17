@@ -27,6 +27,12 @@ class Segment():
         unpacked_data = struct.unpack('>IIBBH32756s', packed_data)
         seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
         return cls(flags, seq_num, ack_num, payload), checksum
+    
+    @classmethod
+    def unpack_str_payload(cls, packed_data):
+        unpacked_data = struct.unpack('>IIBBH32756s', packed_data)
+        seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
+        return cls(flags, seq_num, ack_num, payload.decode().strip('\x00')), checksum
 
 
     @staticmethod
