@@ -1,27 +1,25 @@
-import socket
-import threading
+from threading import Thread
+from utils.Node import Node
+from utils.Connection import Connection
 from utils.Logger import Logger
+from utils.Segment import Segment
 
-class Server:
-    def __init__(self, served_filepath:str, address:str='0.0.0.0', port:int=8080):
-        super().__init__()
-        self.address = address
-        self.port = port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.socket.bind((self.address, self.port))
-        self.served_filepath = served_filepath
+class Server(Node):
+    def __init__(self, served_filepath:str, ip: str='0.0.0.0', port:int=8080) -> None:
+        super().__init__(Connection(ip, port))
+        self.__connection:Connection = self._Node__connection
+        self.ip:str = ip
+        self.port:int = port
+        self.served_filepath:str = served_filepath
         self.client_list = []
 
-    def server_loop(self):
+    def __event_loop(self):
         while self.running:
-
-            data, client_address = self.socket.recvfrom(1024)
+            data, client_address = self.__connection.listen()
+            Logger.alert(f"Received connection from {client_address[0]}/{client_address[1]}")
             self.client_list.append(client_address)
-            Logger.alert(f"Received request from {client_address[0]}:{client_address[1]}, data: {data.decode()}")
-            self.socket.sendto('OFFER'.encode(), client_address)
-            
+            self.__connection.send("OFFER".encode(), client_address[0], client_address[1])
+
             continue_input = ''
             while not continue_input in ['y', 'n']:
                 accept = Logger.input("Listen more? (y/n)")
@@ -33,10 +31,10 @@ class Server:
                     print("")
                     for client in self.client_list:
                         #TODO: utilize appropriate protocols and types, handshake goes here
-                        self.socket.sendto('HANDSHAKE'.encode(), client)
+                        self.__connection.send('HANDSHAKE'.encode(), client[0], client[1])
                         
                         #TODO: utilize appropriate protocols and types, file sending goes here
-                        self.socket.sendto('DONE'.encode(), client)
+                        self.__connection.send('DONE'.encode(), client[0], client[1])
 
                     Logger.critical("Server finished sending files. Stopping")
                     self.stop()
@@ -46,17 +44,23 @@ class Server:
                 else:
                     Logger.alert("Invalid input!")
 
+
     def run(self):
         self.running = True
-        Logger.alert(f"Server started at {self.address}:{self.port}")
-        threading.Thread(target=self.server_loop).start()
+        Logger.alert(f"Server started at {self.ip}:{self.port}")
+        Thread(target=self.__event_loop).start()
 
     def stop(self):
         self.running = False
-        self.socket.close()
+        self.__connection.close()
+
+    def handle_message(self, segment: Segment):
+        # TODO: Implement
+        pass
 
 if __name__ == "__main__":
-    server = Server("test.txt", '0.0.0.0', 8080)
+    print("Starting main in server")
+    server = Server("Test.txt")
     server.run()
 
     try:

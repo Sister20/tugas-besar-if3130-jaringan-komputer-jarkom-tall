@@ -1,5 +1,5 @@
 import struct
-from SegmentFlag import SegmentFlag
+from utils.SegmentFlag import SegmentFlag
 
 class Segment():
     # ini gimana caranya bikin struct di python anjir
@@ -13,7 +13,7 @@ class Segment():
 
     
     def pack(self):
-        return struct.pack(">II2BHH8189s",
+        return struct.pack(">IIBBH32756s",
                            self.seq_num,
                            self.ack_num,
                            self.flags,
@@ -23,7 +23,7 @@ class Segment():
                            )
     
     def unpack(cls, packed_data):
-        unpacked_data = struct.unpack('>II2BHH8189s', packed_data)
+        unpacked_data = struct.unpack('>IIBBH32756s', packed_data)
         seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
         return cls(flags, seq_num, ack_num, payload), checksum
 

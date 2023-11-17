@@ -1,58 +1,46 @@
-import socket
-import threading
+from threading import Thread
+from utils.Node import Node
+from utils.Connection import Connection
 from utils.Logger import Logger
+from utils.Segment import Segment
 
-class Client:
-    def __init__(self, server_port:int=8080, default_buffer_size:int=1024):
-        self.server_port = server_port
-        self.broadcast_address = ('<broadcast>', self.server_port)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        self.running = False
-        self.default_buffer_size = default_buffer_size
+class Client(Node):
+    def __init__(self, ip: str='0.0.0.0', port:int=8081, server_port:int=8080) -> None:
+        super().__init__(Connection(ip, port))
+        self.__connection:Connection = self._Node__connection
+        self.ip:str = ip
+        self.port:int = port
+        self.server_port:int = server_port
 
     def run(self):
         self.running = True
-
-        self.send_broadcast("DISCOVER")
-        local_address, local_port = self.socket.getsockname()
-        Logger.alert(f"Client started. Local address: {local_address}, Local port: {local_port}")
         
-        response, server_address = self.receive_data()
-        self.server_address = server_address
+        # Broadcast
+        self.__connection.send("test".encode(), '<broadcast>', self.server_port)
+        data, server_address = self.__connection.listen()
+        Logger.alert(f"Received response from server at {server_address[0]}:{server_address[1]}")
+        Logger.alert(f"Response: {data.decode()}")
 
-        Logger.alert(f"Received response from server at {self.server_address[0]}:{self.server_address[1]}")
-        Logger.alert(f"Response: {response.decode()}")
-
-        # TODO: utilize appropriate protocols and types, handshake goes here
-        response, server_address = self.receive_data()
-        # TODO: utilize appropriate protocols and types, file transfer goes here
-        while(response.decode() != "DONE"):
-            response, server_address = self.receive_data()
-            if(response.decode() == "DONE"):
+        # TODO: utilize appropriate protocols and types, file transfer and handshake goes here
+        while(data.decode() != "DONE"):
+            data, server_address = self.__connection.listen()
+            Logger.alert(f"Response: {data.decode()}")
+            if(data.decode() == "DONE"):
                 Logger.critical(f"Server finished, stopping")
                 self.stop()
 
-
-    # TODO: utilize appropriate protocols and types
-    def send_broadcast(self, message:str):
-        self.socket.sendto(message.encode(), self.broadcast_address)
-    
-    # TODO: utilize appropriate protocols and types
-    def send_data(self, message:str):
-        self.socket.sendto(message.encode(), self.server_address)
-
-    # TODO: utilize appropriate protocols and types
-    def receive_data(self):
-        return self.socket.recvfrom(self.default_buffer_size)
-
     def stop(self):
         self.running = False
-        self.socket.close()
+        self.__connection.close()
+
+    def handle_message(self, segment: Segment):
+        # TODO: Implement
+        pass
 
 if __name__ == "__main__":
-    client = Client(8080)
-    threading.Thread(target=client.run).start()
+    print("Starting main in client")
+    client = Client()
+    Thread(target=client.run).start()
 
     try:
         while client.running:
