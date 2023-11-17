@@ -22,6 +22,7 @@ class Segment():
                            self.payload
                            )
     
+    @classmethod
     def unpack(cls, packed_data):
         unpacked_data = struct.unpack('>IIBBH32756s', packed_data)
         seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
@@ -48,15 +49,15 @@ class Segment():
     def fin_ack(seq_num:int, ack_num:int):
         return Segment(SegmentFlag.FLAG_FIN | SegmentFlag.FLAG_ACK, seq_num, ack_num, None)
 
-    def __calculate_checksum():
+    def __calculate_checksum(self):
         # TODO: implement
         return 0
     
-    def update_checksum():
+    def update_checksum(self):
         # TODO: implement
         return 0
     
-    def is_valid_checksum():
+    def is_valid_checksum(self):
         # TODO: implement
         return True
     

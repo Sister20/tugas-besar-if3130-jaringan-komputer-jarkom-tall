@@ -1,6 +1,7 @@
 import socket
 from threading import Thread
 from utils.MessageInfo import MessageInfo
+from utils.Segment import Segment
 
 class Connection:
     def __init__(self, ip:str, port:int, handler: callable = None):
@@ -14,9 +15,9 @@ class Connection:
         
         self.handler = handler
 
-    def send(self, data:bytes, ip_remote:str, port_remote:int):
-        remote_address = (ip_remote, port_remote)
-        self.__socket.sendto(data, remote_address)
+    def send(self, message:MessageInfo):
+        remote_address = (message.ip, message.port)
+        self.__socket.sendto(message.segment.pack(), remote_address)
 
     def listen(self):
         return self.__socket.recvfrom(32768) # Size of the struct

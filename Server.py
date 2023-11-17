@@ -1,5 +1,6 @@
 from threading import Thread
 from utils.Node import Node
+from utils.MessageInfo import MessageInfo
 from utils.Connection import Connection
 from utils.Logger import Logger
 from utils.Segment import Segment
@@ -18,7 +19,10 @@ class Server(Node):
             data, client_address = self.__connection.listen()
             Logger.alert(f"Received connection from {client_address[0]}/{client_address[1]}")
             self.client_list.append(client_address)
-            self.__connection.send("OFFER".encode(), client_address[0], client_address[1])
+            self.__connection.send(
+                MessageInfo(client_address[0], client_address[1],
+                             Segment(0, 0, 0, "OFFER".encode())
+                             ))
 
             continue_input = ''
             while not continue_input in ['y', 'n']:
@@ -31,16 +35,25 @@ class Server(Node):
                     print("")
                     for client in self.client_list:
                         #TODO: utilize appropriate protocols and types, handshake goes here
-                        self.__connection.send('HANDSHAKE'.encode(), client[0], client[1])
+                        self.__connection.send(
+                            MessageInfo(client[0], client[1],
+                                         Segment(0, 0, 1, "HANDSHAKE".encode())
+                                         ))
                         
                         #TODO: utilize appropriate protocols and types, file sending goes here
-                        self.__connection.send('DONE'.encode(), client[0], client[1])
+                        self.__connection.send(
+                            MessageInfo(client[0], client[1],
+                                         Segment(0, 0, 1, "DONE".encode())
+                                         ))
 
                     Logger.critical("Server finished sending files. Stopping")
                     self.stop()
                     break
                 elif accept == 'y':
-                    self.__connection.send("WAIT".encode(), client_address[0], client_address[1])
+                    self.__connection.send(
+                        MessageInfo(client[0], client[1], 
+                                    Segment(0, 0, 0, "WAIT".encode())
+                                    ))
                     break
                 else:
                     Logger.alert("Invalid input!")

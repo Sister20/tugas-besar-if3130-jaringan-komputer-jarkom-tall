@@ -1,5 +1,6 @@
 from threading import Thread
 from utils.Node import Node
+from utils.MessageInfo import MessageInfo
 from utils.Connection import Connection
 from utils.Logger import Logger
 from utils.Segment import Segment
@@ -17,20 +18,27 @@ class Client(Node):
         self.running = True
         try:    
             # Broadcast
-            self.__connection.send("test".encode(), '<broadcast>', self.server_port)
+            self.__connection.send(
+                MessageInfo('<broadcast>', self.server_port,
+                             Segment(0, 0, 0, "DISCOVER".encode())
+                             ))
             data, server_address = self.__connection.listen()
+            data, checksum = Segment.unpack(data)
+            string_data = data.payload.decode().strip('\x00')
 
             Logger.alert(f"Received response from server at {server_address[0]}:{server_address[1]}")
-            Logger.alert(f"Response: {data.decode()}")
+            Logger.alert(f"Response: {data.payload.decode()}")
 
             # If the server replied, we may establish connection and hence timeout is set for longer
             self.__connection.setTimeout(300)
 
             # TODO: utilize appropriate protocols and types, file transfer and handshake goes here
-            while(data.decode() != "DONE"):
+            while(string_data != "DONE"):
                 data, server_address = self.__connection.listen()
-                Logger.alert(f"Response: {data.decode()}")
-                if(data.decode() == "DONE"):
+                data, checksum = Segment.unpack(data)
+                string_data = data.payload.decode().strip('\x00')
+                Logger.alert(f"Response: {string_data}")
+                if(string_data == "DONE"):
                     Logger.critical(f"Server finished, stopping")
                     self.stop()
         except TimeoutError:
