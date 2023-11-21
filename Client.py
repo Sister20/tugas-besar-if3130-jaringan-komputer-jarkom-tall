@@ -2,7 +2,7 @@ from threading import Thread
 from utils.Node import Node
 from utils.MessageInfo import MessageInfo
 from utils.Connection import Connection, OncomingConnection
-from utils.Logger import Logger
+from utils.Terminal import Terminal
 from utils.Segment import Segment
 
 class Client(Node):
@@ -19,10 +19,10 @@ class Client(Node):
         # while True:
         response: OncomingConnection = self.__connection.send("Testing".encode(), "<broadcast>", self.server_port)
         if(response.valid):
-            Logger.log(f"Done", Logger.ALERT_SYMBOL, "Handshake")
+            Terminal.log(f"Done", Terminal.ALERT_SYMBOL, "Handshake")
         else:
             if(response.error_code == OncomingConnection.ERR_TIMEOUT):
-                Logger.log(f"Connection timeout! Shutting down...", Logger.CRITICAL_SYMBOL, "Error")
+                Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
         self.stop()
         # break
 
@@ -43,5 +43,5 @@ if __name__ == "__main__":
         while client.running:
             pass
     except KeyboardInterrupt:
-        Logger.log("Keyboard interrupt received. Stopping", Logger.CRITICAL_SYMBOL)
+        Terminal.log("Keyboard interrupt received. Stopping", Terminal.CRITICAL_SYMBOL)
         client.stop()

@@ -1,11 +1,11 @@
-class Logger:
+class Terminal:
     ALERT_SYMBOL = "[!]"
     CRITICAL_SYMBOL = "[!!]"
     INPUT_SYMBOL = "[?]"
 
     @staticmethod
     def input(message:str, descriptor:str=None):
-        print(Logger.INPUT_SYMBOL,end=" ")
+        print(Terminal.INPUT_SYMBOL,end=" ")
         if descriptor != None:
             print(f"[{descriptor}]",end=" ")
         print(f"{message}",end=" ")

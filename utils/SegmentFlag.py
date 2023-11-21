@@ -1,5 +1,3 @@
-import struct
-
 class SegmentFlag():
     # ini gimana caranya bikin enum/static di python anjir
     FLAG_NONE = 0

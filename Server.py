@@ -2,7 +2,7 @@ from threading import Thread
 from utils.Node import Node
 from utils.MessageInfo import MessageInfo
 from utils.Connection import Connection, OncomingConnection
-from utils.Logger import Logger
+from utils.Terminal import Terminal
 from utils.Segment import Segment
 
 class Server(Node):
@@ -21,17 +21,17 @@ class Server(Node):
 
             if(request.valid):
                 data, client_address = self.__connection.listen()
-                Logger.log(f"Received data from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL)
-                Logger.log(f"Data is {data.decode()}")
+                Terminal.log(f"Received data from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL)
+                Terminal.log(f"Data is {data.decode()}")
             else:
                 if request.error_code == OncomingConnection.ERR_TIMEOUT:
-                    Logger.log(f"Connection timeout with {request.address[0]}:{request.address[1]}", Logger.CRITICAL_SYMBOL)
+                    Terminal.log(f"Connection timeout with {request.address[0]}:{request.address[1]}", Terminal.CRITICAL_SYMBOL)
                 if request.error_code == OncomingConnection.ERR_RESET:
-                    Logger.log(f"Connection reset with {request.address[0]}:{request.address[1]}", Logger.CRITICAL_SYMBOL)
+                    Terminal.log(f"Connection reset with {request.address[0]}:{request.address[1]}", Terminal.CRITICAL_SYMBOL)
 
     def run(self):
         self.running = True
-        Logger.log(f"Server started at {self.ip}:{self.port}", Logger.ALERT_SYMBOL)
+        Terminal.log(f"Server started at {self.ip}:{self.port}", Terminal.ALERT_SYMBOL)
         Thread(target=self.__event_loop).start()
 
     def stop(self):
@@ -51,5 +51,5 @@ if __name__ == "__main__":
         while server.running:
             pass
     except KeyboardInterrupt:
-        Logger.log("Keyboard interrupt received. Stopping", Logger.CRITICAL_SYMBOL)
+        Terminal.log("Keyboard interrupt received. Stopping", Terminal.CRITICAL_SYMBOL)
         server.stop()

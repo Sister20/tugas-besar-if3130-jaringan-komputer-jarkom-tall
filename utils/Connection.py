@@ -1,8 +1,7 @@
 import socket
 import utils.Config as Config
-import time
 from threading import Thread
-from utils.Logger import Logger
+from utils.Terminal import Terminal
 from utils.MessageInfo import MessageInfo
 from utils.Segment import Segment
 from utils.SegmentFlag import SegmentFlag
@@ -70,35 +69,35 @@ class Connection:
 
         self.setTimeout(Config.HANDSHAKE_TIMEOUT)
         remote_address = (ip_remote, port_remote)
-        Logger.log("Initiating three way handshake", Logger.ALERT_SYMBOL)
+        Terminal.log("Initiating three way handshake", Terminal.ALERT_SYMBOL)
         try:
-            Logger.log(f"Sending SYN request to {ip_remote}:{port_remote}", Logger.ALERT_SYMBOL, "Handshake")
+            Terminal.log(f"Sending SYN request to {ip_remote}:{port_remote}", Terminal.ALERT_SYMBOL, "Handshake")
             self.__socket.sendto(Segment.syn(seq_num).pack(), remote_address)
 
             while True:
-                Logger.log("Waiting for response...", Logger.ALERT_SYMBOL, "Handshake")
+                Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
                 data, client_address = self.listen()
                 if(client_address == ip_remote or ip_remote == '<broadcast>'):
                     try:
                         data, checksum = Segment.unpack(data)
                         if data.flags == SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK:
-                            Logger.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Handshake")
+                            Terminal.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
                             
                             ack_num = data.seq_num + 1
                             seq_num = seq_num + 1
                             
-                            # self.__socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address) #TODO: what should seq_num be?
-                            Logger.log(f"Sending ACK to {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Handshake")
+                            self.__socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address) #TODO: what should seq_num be?
+                            Terminal.log(f"Sending ACK to {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
                             
                             self.setTimeout(None)
                             return OncomingConnection(True, client_address, seq_num, ack_num)
                         
                     except Exception:
-                        Logger.log(f"Received bad response from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Error")
+                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Error")
 
         except TimeoutError:
             self.__socket.sendto(Segment.rst().pack(), remote_address)
-            Logger.log(f"Handshake timeout", Logger.CRITICAL_SYMBOL, "Handshake")
+            Terminal.log(f"Handshake timeout", Terminal.CRITICAL_SYMBOL, "Handshake")
             self.setTimeout(None)
             return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
 
@@ -110,16 +109,16 @@ class Connection:
         try:
             data, checksum = Segment.unpack(data)
         except Exception:
-            Logger.log(f"Received bad request from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Error")
+            Terminal.log(f"Received bad request from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Error")
             return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_INVALID_SEGMENT)
         
         if data.flags == SegmentFlag.FLAG_SYN:
-            Logger.log(f"Received SYN from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Handshake")
+            Terminal.log(f"Received SYN from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
             
             ack_num = data.seq_num + 1
 
             self.__socket.sendto(Segment.syn_ack(seq_num, ack_num).pack(), client_address)
-            Logger.log(f"Sending SYN-ACK to {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Handshake")
+            Terminal.log(f"Sending SYN-ACK to {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
             
             client = client_address
 
@@ -133,23 +132,23 @@ class Connection:
                     try:
                         data, checksum = Segment.unpack(data)
                     except:
-                        Logger.log(f"Received bad response from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Error")
+                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Error")
                         continue
 
                     if data.flags == SegmentFlag.FLAG_ACK and data.ack_num == seq_num + 1:
-                        Logger.log(f"Received ACK from {client_address[0]}:{client_address[1]}", Logger.ALERT_SYMBOL, "Handshake")
+                        Terminal.log(f"Received ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
                         
                         self.setTimeout(None)
                         return OncomingConnection(True, client_address, data.seq_num, data.ack_num)
                     
                     if data.flags == SegmentFlag.FLAG_RST:
-                        Logger.log(f"Received RST from {client_address[0]}:{client_address[1]}", Logger.CRITICAL_SYMBOL, "Handshake")
+                        Terminal.log(f"Received RST from {client_address[0]}:{client_address[1]}", Terminal.CRITICAL_SYMBOL, "Handshake")
                         
                         self.setTimeout(None)
                         return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_RESET)
 
             except TimeoutError:
-                Logger.log(f"No ACK received from {client[0]}:{client[1]}", Logger.CRITICAL_SYMBOL, "Handshake")
+                Terminal.log(f"No ACK received from {client[0]}:{client[1]}", Terminal.CRITICAL_SYMBOL, "Handshake")
                 
                 self.setTimeout(None)
                 return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_TIMEOUT)
