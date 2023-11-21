@@ -19,7 +19,7 @@ class OncomingConnection:
         self.error_code = error_code
 
 class Connection:
-    def __init__(self, ip:str, port:int, handler: callable = None):
+    def __init__(self, ip:str, port:int, handler: callable = None) -> None:
         self.ip = ip
         self.port = port
         self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -30,7 +30,7 @@ class Connection:
         
         self.handler = handler
 
-    def send(self, data:bytes, ip_remote:str, port_remote:int):
+    def send(self, data:bytes, ip_remote:str, port_remote:int) -> OncomingConnection:
         remote_address = (ip_remote, port_remote)
 
         #TODO: This is a temporary placeholder, actually implement
@@ -45,10 +45,10 @@ class Connection:
     def listen(self):
         return self.__socket.recvfrom(32768)
 
-    def close(self):
+    def close(self) -> None:
         self.__socket.close()
 
-    def register_handler(self, handler: callable):
+    def register_handler(self, handler: callable) -> None:
         self.handler = Thread(handler)
 
     def notify(self, message: MessageInfo=None):
@@ -57,14 +57,13 @@ class Connection:
             self.handler.start()
             self.handler.join()
 
-    def setTimeout(self, time_seconds:int):
+    def setTimeout(self, time_seconds:float) -> None:
+        # NOTE: use None to set for no timeouts
         self.__socket.settimeout(time_seconds)
 
     # Local utility function for TCP-like connections
     # For establishing connections as the requester (client)
     def __establish(self, ip_remote: str, port_remote:int) -> OncomingConnection:
-        # NOTE: This function may work really well as a thread
-
         seq_num = 0 #TODO: what should seq_num be?
 
         self.setTimeout(Config.HANDSHAKE_TIMEOUT)
@@ -102,7 +101,7 @@ class Connection:
             return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
 
     # For establishing connections as the acceptor (server)
-    def open(self) -> (bool, (any, any), int, int):
+    def open(self) -> OncomingConnection:
         seq_num = 0 #TODO: what should seq_num be?
         
         data, client_address = self.listen()
