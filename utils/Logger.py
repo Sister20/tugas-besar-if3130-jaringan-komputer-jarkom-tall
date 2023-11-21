@@ -2,16 +2,19 @@ class Logger:
     ALERT_SYMBOL = "[!]"
     CRITICAL_SYMBOL = "[!!]"
     INPUT_SYMBOL = "[?]"
-    
-    @staticmethod
-    def alert(message:str):
-        print(f"{Logger.ALERT_SYMBOL} {message}")
 
     @staticmethod
-    def input(message:str):
-        return input(f"{Logger.INPUT_SYMBOL} {message} ")
+    def input(message:str, descriptor:str=None):
+        print(Logger.INPUT_SYMBOL,end=" ")
+        if descriptor != None:
+            print(f"[{descriptor}]",end=" ")
+        print(f"{message}",end=" ")
+        return input()
     
     @staticmethod
-    def critical(message:str):
-        print(f"{Logger.CRITICAL_SYMBOL} {message}")
-    
+    def log(message:str, symbol:str=None, descriptor:str=None):
+        if symbol != None:
+            print(f"{symbol}",end=" ")
+        if descriptor != None:
+            print(f"[{descriptor}]",end=" ")
+        print(f"{message}",end="\n")

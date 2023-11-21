@@ -1,12 +1,12 @@
 from threading import Thread
 from utils.Node import Node
 from utils.MessageInfo import MessageInfo
-from utils.Connection import Connection
+from utils.Connection import Connection, OncomingConnection
 from utils.Logger import Logger
 from utils.Segment import Segment
 
 class Client(Node):
-    def __init__(self, ip: str='0.0.0.0', port:int=8082, server_port:int=8080) -> None:
+    def __init__(self, ip: str='0.0.0.0', port:int=8082, server_port:int=8000) -> None:
         super().__init__(Connection(ip, port))
         self.__connection:Connection = self._Node__connection
         self.__connection.setTimeout(30) # Default timeout is 30s
@@ -16,33 +16,15 @@ class Client(Node):
 
     def run(self):
         self.running = True
-        try:    
-            # Broadcast
-            self.__connection.send(
-                MessageInfo('<broadcast>', self.server_port,
-                             Segment(0, 0, 0, "DISCOVER".encode())
-                             ))
-            data, server_address = self.__connection.listen()
-            data, checksum = Segment.unpack_str_payload(data)
-
-            Logger.alert(f"Received response from server at {server_address[0]}:{server_address[1]}")
-            Logger.alert(f"Response: {data.payload}")
-
-            # If the server replied, we may establish connection and hence timeout is set for longer
-            self.__connection.setTimeout(300)
-
-            # TODO: utilize appropriate protocols and types, file transfer and handshake goes here
-            while(data.payload != "DONE"):
-                data, server_address = self.__connection.listen()
-                data, checksum = Segment.unpack_str_payload(data)
-                Logger.alert(f"Response: {data.payload}")
-                if(data.payload == "DONE"):
-                    Logger.critical(f"Server finished, stopping")
-                    self.stop()
-        except TimeoutError:
-            print("Connection Timeout!")
-            self.stop()
-            return
+        # while True:
+        response: OncomingConnection = self.__connection.send("Testing".encode(), "<broadcast>", self.server_port)
+        if(response.valid):
+            Logger.log(f"Done", Logger.ALERT_SYMBOL, "Handshake")
+        else:
+            if(response.error_code == OncomingConnection.ERR_TIMEOUT):
+                Logger.log(f"Connection timeout! Shutting down...", Logger.CRITICAL_SYMBOL, "Error")
+        self.stop()
+        # break
 
     def stop(self):
         self.running = False
@@ -61,5 +43,5 @@ if __name__ == "__main__":
         while client.running:
             pass
     except KeyboardInterrupt:
-        Logger.critical("Keyboard interrupt received. Stopping")
+        Logger.log("Keyboard interrupt received. Stopping", Logger.CRITICAL_SYMBOL)
         client.stop()

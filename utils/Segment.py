@@ -37,15 +37,15 @@ class Segment():
 
     @staticmethod
     def syn(seq_num:int):
-        return Segment(SegmentFlag.FLAG_SYN, seq_num, 0, None)
+        return Segment(SegmentFlag.FLAG_SYN, seq_num, 0, "".encode())
     
     @staticmethod
     def ack(seq_num:int, ack_num:int):
-        return Segment(SegmentFlag.FLAG_ACK, seq_num, ack_num, None)
+        return Segment(SegmentFlag.FLAG_ACK, seq_num, ack_num, "".encode())
 
     @staticmethod
     def syn_ack(seq_num:int, ack_num:int):
-        return Segment(SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK, seq_num, ack_num, None)
+        return Segment(SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK, seq_num, ack_num, "".encode())
 
     @staticmethod
     def fin(seq_num:int):
@@ -53,7 +53,11 @@ class Segment():
     
     @staticmethod
     def fin_ack(seq_num:int, ack_num:int):
-        return Segment(SegmentFlag.FLAG_FIN | SegmentFlag.FLAG_ACK, seq_num, ack_num, None)
+        return Segment(SegmentFlag.FLAG_FIN | SegmentFlag.FLAG_ACK, seq_num, ack_num, "".encode())
+
+    @staticmethod
+    def rst():
+        return Segment(SegmentFlag.FLAG_RST, 0, 0, "".encode())
 
     def __calculate_checksum(self):
         # TODO: implement
