@@ -4,21 +4,22 @@ from utils.Terminal import Terminal
 from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
-from connection.TCPConnection import TCPConnection
+# from connection.TCPConnection import TCPConnection
+from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 
 class Client(Node):
     def __init__(self, ip: str='0.0.0.0', port:int=8082, server_port:int=8000) -> None:
         super().__init__(TCPConnection(ip, port))
-        self.__connection: TCPConnection = self._Node__connection
-        self.__connection.setTimeout(30) # Default timeout is 30s
+        self.connection: TCPConnection = self.connection
+        self.connection.setTimeout(30) # Default timeout is 30s
         self.ip:str = ip
         self.port:int = port
         self.server_port:int = server_port
 
     def run(self):
         self.running = True
-        response: OncomingConnection = self.__connection.requestHandshake("<broadcast>", self.server_port)
+        response: OncomingConnection = self.connection.requestHandshake("<broadcast>", self.server_port)
         if(response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
         else:
@@ -28,7 +29,7 @@ class Client(Node):
 
     def stop(self):
         self.running = False
-        self.__connection.close()
+        self.connection.close()
 
     def handle_message(self, segment: Segment):
         # TODO: Implement

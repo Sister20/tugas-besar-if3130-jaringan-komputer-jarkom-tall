@@ -4,14 +4,15 @@ from Node import Node
 from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
-from connection.TCPConnection import TCPConnection
+# from connection.TCPConnection import TCPConnection
+from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 
 class Server(Node):
     def __init__(self, served_filepath:str, ip: str='0.0.0.0', port:int=8000) -> None:
         super().__init__(TCPConnection(ip, port))
-        self.__connection:TCPConnection = self._Node__connection
-        self.__connection.setTimeout(None)
+        self.connection:TCPConnection = self.connection
+        self.connection.setTimeout(None)
         self.ip:str = ip
         self.port:int = port
         self.served_filepath:str = served_filepath
@@ -19,7 +20,7 @@ class Server(Node):
 
     def __event_loop(self):
         while self.running:
-            request: OncomingConnection =  self.__connection.acceptHandshake()
+            request: OncomingConnection =  self.connection.acceptHandshake()
 
             if(request.valid):
                 Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL, "Handshake")
@@ -36,7 +37,7 @@ class Server(Node):
 
     def stop(self):
         self.running = False
-        self.__connection.close()
+        self.connection.close()
 
     def handle_message(self, segment: Segment):
         # TODO: Implement

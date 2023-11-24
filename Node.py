@@ -5,7 +5,7 @@ from message.Segment import Segment
 # Just don't use it
 class Node:
     def __init__(self, connection:Connection):
-        self.__connection = connection
+        self.connection = connection
         self.running = False
 
     def run(self):

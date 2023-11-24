@@ -12,7 +12,6 @@ from random import randint
 class TCPConnection(Connection):
     def __init__(self, ip:str, port:int, handler: callable = None) -> None:
         super().__init__(ip, port, handler)
-        self.__socket = self._Connection__socket
 
     def requestHandshake(self, ip_remote: str, port_remote:int) -> OncomingConnection:
         seq_num = randint(0, 4294967295)
@@ -22,7 +21,7 @@ class TCPConnection(Connection):
         Terminal.log("Initiating three way handshake", Terminal.ALERT_SYMBOL)
         try:
             Terminal.log(f"Sending SYN request to {ip_remote}:{port_remote}", Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(seq_num))
-            self.__socket.sendto(Segment.syn(seq_num).pack(), remote_address)
+            self.socket.sendto(Segment.syn(seq_num).pack(), remote_address)
 
             while True:
                 Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
@@ -36,7 +35,7 @@ class TCPConnection(Connection):
                             ack_num = data.seq_num + 1
                             seq_num = seq_num + 1
                             
-                            self.__socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address)
+                            self.socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address)
                             Terminal.log(f"Sending ACK to {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(seq_num))
                             
                             self.setTimeout(None)
@@ -47,7 +46,7 @@ class TCPConnection(Connection):
                         Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Error")
 
         except TimeoutError:
-            self.__socket.sendto(Segment.rst().pack(), remote_address)
+            self.socket.sendto(Segment.rst().pack(), remote_address)
             Terminal.log(f"Handshake timeout", Terminal.CRITICAL_SYMBOL, "Handshake")
             self.setTimeout(None)
             return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
@@ -67,7 +66,7 @@ class TCPConnection(Connection):
             
             ack_num = data.seq_num + 1
 
-            self.__socket.sendto(Segment.syn_ack(seq_num, ack_num).pack(), client_address)
+            self.socket.sendto(Segment.syn_ack(seq_num, ack_num).pack(), client_address)
             Terminal.log(f"Sending SYN-ACK to {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(seq_num))
             
             client = client_address
