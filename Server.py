@@ -22,7 +22,7 @@ class Server(Node):
             request: OncomingConnection =  self.__connection.acceptHandshake()
 
             if(request.valid):
-                Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL)
+                Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL, "Handshake")
             else:
                 if request.error_code == OncomingConnection.ERR_TIMEOUT:
                     Terminal.log(f"Connection timeout with {request.address[0]}:{request.address[1]}", Terminal.CRITICAL_SYMBOL)
