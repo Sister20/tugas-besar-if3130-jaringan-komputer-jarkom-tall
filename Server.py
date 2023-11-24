@@ -1,14 +1,16 @@
 from threading import Thread
-from utils.Node import Node
-from utils.MessageInfo import MessageInfo
-from utils.Connection import Connection, OncomingConnection
 from utils.Terminal import Terminal
-from utils.Segment import Segment
+from Node import Node
+from message.MessageInfo import MessageInfo
+from message.Segment import Segment
+from connection.Connection import Connection
+from connection.TCPConnection import TCPConnection
+from connection.OncomingConnection import OncomingConnection
 
 class Server(Node):
     def __init__(self, served_filepath:str, ip: str='0.0.0.0', port:int=8000) -> None:
-        super().__init__(Connection(ip, port))
-        self.__connection:Connection = self._Node__connection
+        super().__init__(TCPConnection(ip, port))
+        self.__connection:TCPConnection = self._Node__connection
         self.__connection.setTimeout(None)
         self.ip:str = ip
         self.port:int = port
@@ -17,12 +19,10 @@ class Server(Node):
 
     def __event_loop(self):
         while self.running:
-            request: OncomingConnection =  self.__connection.open()
+            request: OncomingConnection =  self.__connection.acceptHandshake()
 
             if(request.valid):
-                data, client_address = self.__connection.listen()
-                Terminal.log(f"Received data from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL)
-                Terminal.log(f"Data is {data.decode()}")
+                Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL)
             else:
                 if request.error_code == OncomingConnection.ERR_TIMEOUT:
                     Terminal.log(f"Connection timeout with {request.address[0]}:{request.address[1]}", Terminal.CRITICAL_SYMBOL)

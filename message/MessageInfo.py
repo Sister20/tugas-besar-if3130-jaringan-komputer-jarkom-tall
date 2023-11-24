@@ -1,4 +1,4 @@
-from utils.Segment import Segment
+from message.Segment import Segment
 
 class MessageInfo:
     def __init__(self, ip:str, port:int, segment:Segment):

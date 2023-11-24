@@ -1,6 +1,5 @@
-from threading import Thread
-from utils.Connection import Connection
-from utils.Segment import Segment
+from connection.Connection import Connection
+from message.Segment import Segment
 
 # Supposed to be an abstract class, python does not have it though
 # Just don't use it

@@ -1,14 +1,16 @@
 from threading import Thread
-from utils.Node import Node
-from utils.MessageInfo import MessageInfo
-from utils.Connection import Connection, OncomingConnection
+from Node import Node
 from utils.Terminal import Terminal
-from utils.Segment import Segment
+from message.MessageInfo import MessageInfo
+from message.Segment import Segment
+from connection.Connection import Connection
+from connection.TCPConnection import TCPConnection
+from connection.OncomingConnection import OncomingConnection
 
 class Client(Node):
     def __init__(self, ip: str='0.0.0.0', port:int=8082, server_port:int=8000) -> None:
-        super().__init__(Connection(ip, port))
-        self.__connection:Connection = self._Node__connection
+        super().__init__(TCPConnection(ip, port))
+        self.__connection: TCPConnection = self._Node__connection
         self.__connection.setTimeout(30) # Default timeout is 30s
         self.ip:str = ip
         self.port:int = port
@@ -16,15 +18,13 @@ class Client(Node):
 
     def run(self):
         self.running = True
-        # while True:
-        response: OncomingConnection = self.__connection.send("Testing".encode(), "<broadcast>", self.server_port)
+        response: OncomingConnection = self.__connection.requestHandshake("<broadcast>", self.server_port)
         if(response.valid):
             Terminal.log(f"Done", Terminal.ALERT_SYMBOL, "Handshake")
         else:
             if(response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
         self.stop()
-        # break
 
     def stop(self):
         self.running = False

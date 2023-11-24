@@ -1,5 +1,5 @@
 import struct
-from utils.SegmentFlag import SegmentFlag
+from message.SegmentFlag import SegmentFlag
 
 class Segment():
     # ini gimana caranya bikin struct di python anjir
