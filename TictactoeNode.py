@@ -33,8 +33,6 @@ class TictactoeNode(Node):
 
         return response
         
-
-    
     def wait_match(self):
         print(f"Waiting for a match in port {self.port}")
         request = None
@@ -51,6 +49,12 @@ class TictactoeNode(Node):
             print("Match not found!")
 
         return request
+    
+    def sendReliable(self):
+        pass
+
+    def receiveReliable(self):
+        pass
 
     def run(self):
         self.running = True
@@ -94,6 +98,7 @@ class TictactoeNode(Node):
                 print("Resetting...\n\n\n")
                 pass
             elif(user_input == 'Q'):
+                # TODO: close the connection properly
                 break
             else:
                 print("Invalid input!")
@@ -104,11 +109,6 @@ class TictactoeNode(Node):
     def stop(self):
         self.running = False
         self.connection.close()
-
-    def handle_message(self, segment: Segment):
-        # TODO: Implement
-        pass
-
 
 if __name__ == "__main__":
     print("Starting main in tictactoe")

@@ -22,7 +22,7 @@ class TCPConnection(Connection):
         Terminal.log("Initiating three way handshake", Terminal.ALERT_SYMBOL)
         try:
             Terminal.log(f"Sending SYN request to {ip_remote}:{port_remote}", Terminal.ALERT_SYMBOL,
-                         "Handshake SEQ_NUM=" + str(seq_num))
+                         "Handshake NUM=" + str(seq_num))
             self.socket.sendto(Segment.syn(seq_num).pack(), remote_address)
 
             while True:
@@ -33,14 +33,14 @@ class TCPConnection(Connection):
                         data, checksum = Segment.unpack(data)
                         if data.flags == SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK:
                             Terminal.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}",
-                                         Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(data.seq_num))
+                                         Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
 
                             ack_num = data.seq_num + 1
                             seq_num = seq_num + 1
 
                             self.socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address)
                             Terminal.log(f"Sending ACK to {client_address[0]}:{client_address[1]}",
-                                         Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(seq_num))
+                                         Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(seq_num))
 
                             self.setTimeout(None)
                             return OncomingConnection(True, client_address, seq_num, ack_num)
@@ -69,13 +69,13 @@ class TCPConnection(Connection):
 
         if data.flags == SegmentFlag.FLAG_SYN:
             Terminal.log(f"Received SYN from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL,
-                         "Handshake SEQ_NUM=" + str(data.seq_num))
+                         "Handshake NUM=" + str(seq_num))
 
             ack_num = data.seq_num + 1
 
             self.socket.sendto(Segment.syn_ack(seq_num, ack_num).pack(), client_address)
             Terminal.log(f"Sending SYN-ACK to {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL,
-                         "Handshake SEQ_NUM=" + str(seq_num))
+                         "Handshake NUM=" + str(seq_num))
 
             client = client_address
 
@@ -95,7 +95,7 @@ class TCPConnection(Connection):
 
                     if data.flags == SegmentFlag.FLAG_ACK and data.ack_num == seq_num + 1:
                         Terminal.log(f"Received ACK from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Handshake SEQ_NUM=" + str(data.seq_num))
+                                     Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
 
                         self.setTimeout(None)
                         return OncomingConnection(True, client_address, data.seq_num, data.ack_num)
@@ -149,13 +149,13 @@ class TCPConnection(Connection):
             data, checksum = Segment.unpack(data)
             if data.flags == SegmentFlag.FLAG_FIN:
                 Terminal.log(f"Received FIN from {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
-                            "Teardown SEQ_NUM=" + str(data.seq_num))
+                            "Teardown NUM=" + str(data.seq_num))
 
                 ack_num = data.seq_num + 1
 
                 self.socket.sendto(Segment.fin_ack(fin_ack_seq_num, ack_num).pack(), from_address)
                 Terminal.log(f"Sending FIN-ACK to {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
-                            "Teardown SEQ_NUM=" + str(fin_ack_seq_num))
+                            "Teardown NUM=" + str(fin_ack_seq_num))
         except Exception:
             Terminal.log(f"Received bad request from {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
                          "Error")
