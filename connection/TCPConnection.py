@@ -112,3 +112,50 @@ class TCPConnection(Connection):
 
                 self.setTimeout(None)
                 return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_TIMEOUT)
+
+    def requestTeardown(self, to_ip: str, to_port: int, fin_seq_num: int):
+        self.setTimeout(Config.TEARDOWN_TIMEOUT)
+        to_address = (to_ip, to_port)
+        Terminal.log("Initiating teardown", Terminal.ALERT_SYMBOL)
+        try:
+            Terminal.log(f"Sending FIN request to {to_ip}:{to_port}", Terminal.ALERT_SYMBOL)
+            self.socket.sendto(Segment.fin(fin_seq_num).pack(), to_address)
+
+            while True:
+                Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Teardown")
+                data, res_address = self.listen()
+                if (res_address == to_ip):
+                    try:
+                        data, checksum = Segment.unpack(data)
+                        if data.flags == SegmentFlag.FLAG_FIN | SegmentFlag.FLAG_ACK:
+                            Terminal.log(f"Accepted FIN-ACK from {res_address[0]}:{res_address[1]}",
+                                         Terminal.ALERT_SYMBOL)
+                            self.setTimeout(None)
+                            break
+
+                    except Exception as e:
+                        print(e)
+                        Terminal.log(f"Received bad response from {res_address[0]}:{res_address[1]}",
+                                     Terminal.ALERT_SYMBOL, "Error")
+
+        except TimeoutError:
+            Terminal.log(f"Teardown timeout", Terminal.CRITICAL_SYMBOL, "Teardown")
+            self.setTimeout(None)
+
+    def acceptTeardown(self, fin_ack_seq_num: int):
+        data, from_address = self.listen()
+
+        try:
+            data, checksum = Segment.unpack(data)
+            if data.flags == SegmentFlag.FLAG_FIN:
+                Terminal.log(f"Received FIN from {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
+                            "Teardown SEQ_NUM=" + str(data.seq_num))
+
+                ack_num = data.seq_num + 1
+
+                self.socket.sendto(Segment.fin_ack(fin_ack_seq_num, ack_num).pack(), from_address)
+                Terminal.log(f"Sending FIN-ACK to {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
+                            "Teardown SEQ_NUM=" + str(fin_ack_seq_num))
+        except Exception:
+            Terminal.log(f"Received bad request from {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
+                         "Error")

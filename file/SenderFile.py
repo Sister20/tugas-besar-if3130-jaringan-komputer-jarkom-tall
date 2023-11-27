@@ -9,14 +9,14 @@ class SenderFile:
     dummy_ack_num = 0
     dummy_seq_num = 0
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.path = path
         self.file = self.__open()
         self.size = self.__get_size()
         self.chunk_count = self.__get_chunk_count()
-        self.segments = self.__set_base_segments()
+        self.segments = self.__get_base_segments()
 
-    def __open(self):
+    def __open(self) -> None:
         try:
             return open(self.path, 'rb')
         except FileNotFoundError:
@@ -24,7 +24,7 @@ class SenderFile:
             Terminal.log('Exiting program...')
             exit(1)
 
-    def __get_size(self):
+    def __get_size(self) -> int:
         try:
             return os.path.getsize(self.path)
         except FileNotFoundError:
@@ -32,15 +32,15 @@ class SenderFile:
             Terminal.log('Exiting program...')
             exit(1)
 
-    def __get_chunk_count(self):
+    def __get_chunk_count(self) -> int:
         return math.ceil(self.size / PAYLOAD_SIZE)
 
-    def __get_chunk(self, idx):
+    def __get_chunk(self, idx: int) -> bytes:
         # Optimize using seek with offset idx * PAYLOAD_SIZE
         self.file.seek(idx * PAYLOAD_SIZE)
         return self.file.read(PAYLOAD_SIZE)
 
-    def __set_base_segments(self):
+    def __get_base_segments(self) -> List[Segment]:
         segments: List[Segment] = []
 
         for i in range(self.chunk_count):
@@ -49,12 +49,12 @@ class SenderFile:
 
         return segments
 
-    def set_seq_num(self, handshake_seq_num):
+    def set_seq_num(self, handshake_seq_num: int) -> None:
         for i in range(self.chunk_count):
             # Ex:
             # Handshake: seq num SYN => 0, seq num ACK => 1
             # First payload (idx 0) will be sent with seq num 1 + 0 + 1 = 2
             self.segments[i].seq_num = handshake_seq_num + 1 + i
 
-    def close(self):
+    def close(self) -> None:
         self.file.close()
