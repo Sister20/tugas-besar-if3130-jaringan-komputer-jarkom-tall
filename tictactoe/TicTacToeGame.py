@@ -3,16 +3,21 @@
 
 from tictactoe.TicTacToeBoard import TicTacToeBoard
 from connection.TCPConnection import TCPConnection
+from connection.OncomingConnection import OncomingConnection
+from message.MessageInfo import MessageInfo
+from message.Segment import Segment
+from message.SegmentFlag import SegmentFlag
 
 class TicTacToeGame():
     def __init__(self, connection: TCPConnection) -> None:
         self.connection = connection
         self.board = TicTacToeBoard()
 
-    def set_peer(self, ip: str, port: int):
-        self.peer_ip = ip
-        self.peer_port = port
-
+    def set_peer(self, connection: OncomingConnection):
+        self.peer_ip = connection.address[0]
+        self.peer_port = connection.address[1]
+        self.connectionInfo = connection
+        
     def intro(self):
         print("\nHello! Welcome to Tic Tac Toe game!\n")
         print("Rules: Player 1 and player 2, represented by X and O, take turns "
@@ -63,7 +68,19 @@ class TicTacToeGame():
                 self.board.put(self.own_symbol, row, column)
                 
                 # TODO: use proper messaging when sending
-                self.connection.send(f"{row}{column}".encode(), self.peer_ip, self.peer_port)
+                self.connectionInfo = self.connection.sendStopNWait(
+                    MessageInfo(
+                        self.peer_ip,
+                        self.peer_port,
+                        Segment(
+                            SegmentFlag.FLAG_NONE,
+                            self.connectionInfo.seq_num,
+                            self.connectionInfo.ack_num,
+                            f"{row}{column}".encode()
+                        )
+                    )
+                )
+                # self.connection.send(f"{row}{column}".encode(), self.peer_ip, self.peer_port)
                 break
             
             except Exception as e:
@@ -76,15 +93,16 @@ class TicTacToeGame():
         print("It's player "+ self.opponent_symbol + "'s move")
         
         # TODO: use proper messaging when listening
-        data, peer_address = self.connection.listen()
-        data = data.decode()
+        self.connectionInfo, data = self.connection.receiveStopNWait()
+        # data, peer_address = self.connection.listen()
+        data, checksum = Segment.unpack_str_payload(data)
+        data = data.payload.decode()
         print(data)
 
         self.board.put(self.opponent_symbol, int(data[0]), int(data[1]))
 
 
     def start_game(self):
-        # TODO: Implement packet delivery for each turn 
         count = 1
         winner = False
 
@@ -135,7 +153,19 @@ class TicTacToeGame():
             self.choose_symbol()
 
             # TODO: use proper messaging when sending
-            self.connection.send(self.own_symbol.encode(), self.peer_ip, self.peer_port)
+            self.connectionInfo = self.connection.sendStopNWait(
+                MessageInfo(
+                    self.peer_ip,
+                    self.peer_port,
+                    Segment(
+                        SegmentFlag.FLAG_NONE,
+                        self.connectionInfo.seq_num,
+                        self.connectionInfo.ack_num,
+                        self.own_symbol.encode()
+                    )
+                )
+            )
+            # self.connection.send(self.own_symbol.encode(), self.peer_ip, self.peer_port)
 
             if self.own_symbol == "N":
                 response, client_address = self.connection.listen()
@@ -166,33 +196,38 @@ class TicTacToeGame():
 
         while True:
             # TODO: use proper messaging when listening
-            response, client_address = self.connection.listen()
-
-            data = response.decode()
+            # response, client_address = self.connection.listen()
+            self.connectionInfo, data = self.connection.receiveStopNWait()
+            data, checksum = Segment.unpack_str_payload(data)
+            data = data.payload.decode()
             if(data == "X"):
-                print(f"Your opponent chooses {response.decode()}")
+                print(f"Your opponent chooses {data}")
                 self.assign_symbol("O")
                 break
             elif(data == "O"):
-                print(f"Your opponent chooses {response.decode()}")
+                print(f"Your opponent chooses {data}")
                 self.assign_symbol("X")
                 break
             elif(data == "N"):
                 print("Your opponent lets you choose your symbol")
 
                 self.choose_symbol()
-                self.connection.send(self.own_symbol.encode(), self.peer_ip, self.peer_port)
+                
+                self.connectionInfo = self.connection.sendStopNWait(
+                    MessageInfo(
+                        self.peer_ip,
+                        self.peer_port,
+                        Segment(
+                            SegmentFlag.FLAG_NONE,
+                            self.connectionInfo.seq_num,
+                            self.connectionInfo.ack_num,
+                            self.own_symbol.encode()
+                        )
+                    )
+                )
+                # self.connection.send(self.own_symbol.encode(), self.peer_ip, self.peer_port)
                 if self.own_symbol == "N":
                     continue
                 break
 
         self.start_game()
-
-
-if __name__ == "__main__":
-    print("Start Testing game")
-
-    game = TicTacToeGame()
-    game.board.print()
-
-    game.initialize()

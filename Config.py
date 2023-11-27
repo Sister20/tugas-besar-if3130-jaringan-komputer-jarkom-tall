@@ -3,9 +3,8 @@ HANDSHAKE_TIMEOUT = 10  # Time for nodes to receive the proper response during a
 CLIENT_TIMEOUT = 20  # Time for client to find a server
 TEARDOWN_TIMEOUT = 10
 
-RESPONSE_TIMEOUT = 4
-SEND_RETRIES = 5
-RETRANSMIT_TIMEOUT = 15
+SEND_RETRIES = 10
+RETRANSMIT_TIMEOUT = 5
 
 SEGMENT_SIZE = 32768
 PAYLOAD_SIZE = 32756        # From SEGMENT_SIZE - header size (12 bytes)

@@ -49,12 +49,6 @@ class TictactoeNode(Node):
             print("Match not found!")
 
         return request
-    
-    def sendReliable(self):
-        pass
-
-    def receiveReliable(self):
-        pass
 
     def run(self):
         self.running = True
@@ -71,7 +65,7 @@ class TictactoeNode(Node):
                 print(request.address[0], request.address[1])
                 self.connection.setTimeout(None)
 
-                self.game.set_peer(request.address[0], request.address[1])
+                self.game.set_peer(request)
                 self.game.initialize_waiter()
                 self.game.summary()
 
@@ -90,7 +84,7 @@ class TictactoeNode(Node):
                 
                 self.connection.setTimeout(None)
 
-                self.game.set_peer(request.address[0], request.address[1])
+                self.game.set_peer(request)
                 self.game.initialize_finder()
                 self.game.summary()
 

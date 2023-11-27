@@ -1,4 +1,5 @@
 import socket
+import struct
 import Config as Config
 from threading import Thread
 from utils.Terminal import Terminal
@@ -45,7 +46,7 @@ class TCPConnection(Connection):
                             self.setTimeout(None)
                             return OncomingConnection(True, client_address, seq_num, ack_num)
 
-                    except Exception as e:
+                    except struct.error as e:
                         print(e)
                         Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
                                      Terminal.ALERT_SYMBOL, "Error")
@@ -62,7 +63,7 @@ class TCPConnection(Connection):
         data, client_address = self.listen()
         try:
             data, checksum = Segment.unpack(data)
-        except Exception:
+        except struct.error:
             Terminal.log(f"Received bad request from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL,
                          "Error")
             return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_INVALID_SEGMENT)
@@ -133,7 +134,7 @@ class TCPConnection(Connection):
                             self.setTimeout(None)
                             break
 
-                    except Exception as e:
+                    except struct.error as e:
                         print(e)
                         Terminal.log(f"Received bad response from {res_address[0]}:{res_address[1]}",
                                      Terminal.ALERT_SYMBOL, "Error")
@@ -156,6 +157,89 @@ class TCPConnection(Connection):
                 self.socket.sendto(Segment.fin_ack(fin_ack_seq_num, ack_num).pack(), from_address)
                 Terminal.log(f"Sending FIN-ACK to {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
                             "Teardown NUM=" + str(fin_ack_seq_num))
-        except Exception:
+        except struct.error:
             Terminal.log(f"Received bad request from {from_address[0]}:{from_address[1]}", Terminal.ALERT_SYMBOL,
                          "Error")
+
+    # ARQ stop and wait
+    # Kemungkinan rusak kalo dipake multithreading soalnya manfaatin setTimeout
+    def sendStopNWait(self, message: MessageInfo) -> OncomingConnection:
+        previousTimeout = self.socket.gettimeout()
+        self.setTimeout(Config.RETRANSMIT_TIMEOUT)
+        
+        Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={message.segment.seq_num}")
+        retries = Config.SEND_RETRIES
+        while retries > 0:
+            try:
+                print("Sending...")
+                self.send(message.segment.pack(), message.ip, message.port)
+                response, client_address = self.listen()
+
+                if(client_address == (message.ip, message.port)):
+                    try:
+                        data, checksum = Segment.unpack(response)
+                        if data.flags == SegmentFlag.FLAG_ACK:
+                            if data.ack_num == message.segment.seq_num + 1:
+                                Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
+                                self.setTimeout(previousTimeout)
+                                return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1)
+                            
+                    except struct.error as e:
+                        print(e)
+
+            except TimeoutError:
+                print("Response timeout!")
+                retries -= 1
+                if(retries > 0):
+                    print("Retrying")
+                else:
+                    print("Stopped retrying")
+
+        self.setTimeout(previousTimeout)
+        return OncomingConnection(False, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num, OncomingConnection.ERR_TIMEOUT)
+
+    def receiveStopNWait(self) -> (OncomingConnection, Segment):
+        previousTimeout = self.socket.gettimeout()
+        self.setTimeout(30)
+
+        # TODO: Gimana kalo ACK-nya ga nyampe? tau dari mana harus stop listen?
+        # Yang dikomen solusinya nunggu sampe timeout tapi ga reliable bjir
+
+        # responded = False
+        # saved_response = None
+        while True:
+            try:
+                print("Listening...")
+                response, client_address = self.listen()
+
+                data, checksum = Segment.unpack(response)
+                Terminal.log(f"Received data from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+                
+                # if(saved_response == None):
+                # responded = True
+                # saved_response = (response, client_address)
+                self.send(Segment.ack(data.ack_num, data.seq_num + 1).pack(), client_address[0], client_address[1])
+                Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+                print("returning")
+                return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), response
+
+                # elif(saved_response == (response, client_address)):
+                #     self.send(Segment.ack(data.ack_num, data.seq_num + 1).pack(), client_address[0], client_address[1])
+                #     Terminal.log(f"Resending ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+
+                # elif (client_address == saved_response[1]):
+                #     return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), saved_response[0].unpack().payload
+                        
+            except struct.error as e:
+                print(e)
+
+            except TimeoutError:
+                print("Request timeout!")
+                self.setTimeout(previousTimeout)
+                # if(responded):
+                #     print("Assumed successful")
+                #     data, checksum = Segment.unpack(saved_response[0])
+                #     return OncomingConnection(False, saved_response[1], data.ack_num, data.seq_num + 1, OncomingConnection.ERR_TIMEOUT), data.payload
+                # else:
+                # print("Assumed unsuccessful")
+                return OncomingConnection(False, None, 0, 0, OncomingConnection.ERR_TIMEOUT), None
