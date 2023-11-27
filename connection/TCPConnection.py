@@ -171,7 +171,6 @@ class TCPConnection(Connection):
         retries = Config.SEND_RETRIES
         while retries > 0:
             try:
-                print("Sending...")
                 self.send(message.segment.pack(), message.ip, message.port)
                 response, client_address = self.listen()
 
@@ -198,9 +197,9 @@ class TCPConnection(Connection):
         self.setTimeout(previousTimeout)
         return OncomingConnection(False, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num, OncomingConnection.ERR_TIMEOUT)
 
-    def receiveStopNWait(self) -> (OncomingConnection, Segment):
+    def receiveStopNWait(self, timeout: int = 30) -> (OncomingConnection, Segment):
         previousTimeout = self.socket.gettimeout()
-        self.setTimeout(30)
+        self.setTimeout(timeout)
 
         # TODO: Gimana kalo ACK-nya ga nyampe? tau dari mana harus stop listen?
         # Yang dikomen solusinya nunggu sampe timeout tapi ga reliable bjir
@@ -209,7 +208,6 @@ class TCPConnection(Connection):
         # saved_response = None
         while True:
             try:
-                print("Listening...")
                 response, client_address = self.listen()
 
                 data, checksum = Segment.unpack(response)
@@ -220,7 +218,6 @@ class TCPConnection(Connection):
                 # saved_response = (response, client_address)
                 self.send(Segment.ack(data.ack_num, data.seq_num + 1).pack(), client_address[0], client_address[1])
                 Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
-                print("returning")
                 return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), response
 
                 # elif(saved_response == (response, client_address)):
