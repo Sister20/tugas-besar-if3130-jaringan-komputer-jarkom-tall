@@ -1,10 +1,11 @@
 from connection.Connection import Connection
 from message.Segment import Segment
 
+
 # Supposed to be an abstract class, python does not have it though
 # Just don't use it
 class Node:
-    def __init__(self, connection:Connection):
+    def __init__(self, connection: Connection):
         self.connection = connection
         self.running = False
 
