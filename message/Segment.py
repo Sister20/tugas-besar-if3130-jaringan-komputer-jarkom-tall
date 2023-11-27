@@ -9,7 +9,6 @@ class Segment():
         self.flags = flags
         self.reserved = 0
         self.payload = payload
-        self.checksum = 0
         self.checksum = self.__calculate_checksum()
 
     def pack(self):
@@ -60,9 +59,16 @@ class Segment():
 
     def __calculate_checksum(self):
         # mengubah data segment menjadi data biner
-        data = self.pack()
+        data = struct.pack(">IIBBH32756s",
+                           self.seq_num,
+                           self.ack_num,
+                           self.flags,
+                           self.reserved,
+                           0,
+                           self.payload
+                           )
         # mengubah nilai checksum menjadi 0
-        data = data[:10] + b'\x00\x00' + data[12:]
+        # data = data[:10] + b'\x00\x00' + data[12:]
         # mengubah data menjadi daftar bilangan bulat 16 bit
         words = struct.unpack("!%dH" % (len(data) // 2), data)
         # menjumlahkan semua kata dengan memperhatikan carry
