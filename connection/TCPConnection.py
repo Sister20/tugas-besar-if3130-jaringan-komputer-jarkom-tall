@@ -210,9 +210,18 @@ class TCPConnection(Connection):
             try:
                 response, client_address = self.listen()
 
+
                 data, checksum = Segment.unpack(response)
+                segment = Segment(data.flags, data.seq_num, data.ack_num, data.payload)
+
+                if not(segment.is_valid_checksum()) :
+                    Terminal.log(f"Received bad data from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+                    self.send(Segment.ack(data.ack_num, data.seq_num + 1).pack(), client_address[0], client_address[1])
+                    Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+                    continue
+
                 Terminal.log(f"Received data from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
-                
+
                 # if(saved_response == None):
                 # responded = True
                 # saved_response = (response, client_address)
@@ -240,3 +249,5 @@ class TCPConnection(Connection):
                 # else:
                 # print("Assumed unsuccessful")
                 return OncomingConnection(False, None, 0, 0, OncomingConnection.ERR_TIMEOUT), None
+
+    # def
