@@ -5,7 +5,10 @@ from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
+# from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
+from file.SenderFile import SenderFile
+from file.ReceiverFile import ReceiverFile
 
 
 class Server(Node):
@@ -13,9 +16,9 @@ class Server(Node):
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
         self.connection.setTimeout(None)
-        self.ip: str = ip
-        self.port: int = port
-        self.served_filepath: str = served_filepath
+        self.ip:str = ip
+        self.port:int = port
+        self.file = SenderFile(served_filepath)
         self.client_list = []
 
     def __event_loop(self):
@@ -37,6 +40,7 @@ class Server(Node):
 
     def stop(self):
         self.running = False
+        self.file.close()
         self.connection.close()
 
     def handle_message(self, segment: Segment):
@@ -46,7 +50,7 @@ class Server(Node):
 
 if __name__ == "__main__":
     print("Starting main in server")
-    server = Server("Test.txt")
+    server = Server("Test.png")
     server.run()
 
     try:

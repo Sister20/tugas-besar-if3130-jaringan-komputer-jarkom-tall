@@ -7,16 +7,18 @@ from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
 # from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
+from file.ReceiverFile import ReceiverFile
 
 
 class Client(Node):
-    def __init__(self, ip: str = '0.0.0.0', port: int = 8082, server_port: int = 8000) -> None:
+    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8082, server_port: int = 8000) -> None:
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
         self.connection.setTimeout(30)  # Default timeout is 30s
         self.ip: str = ip
         self.port: int = port
         self.server_port: int = server_port
+        self.output_file = ReceiverFile(output_file_path)
 
     def run(self):
         self.running = True
@@ -30,6 +32,7 @@ class Client(Node):
 
     def stop(self):
         self.running = False
+        self.output_file.close()
         self.connection.close()
 
     def handle_message(self, segment: Segment):
@@ -39,7 +42,7 @@ class Client(Node):
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client()
+    client = Client("Out.png")
     Thread(target=client.run).start()
 
     try:
