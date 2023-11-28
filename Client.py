@@ -21,6 +21,7 @@ class Client(Node):
         self.output_file = ReceiverFile(output_file_path)
 
     def run(self):
+        self.connection.startListening()
         self.connection.send("DISCOVER".encode(), "<broadcast>", self.server_port)
         data, server_addr = self.connection.listen()
         Terminal.log(f"Server found at {server_addr[0]}:{server_addr[1]}")

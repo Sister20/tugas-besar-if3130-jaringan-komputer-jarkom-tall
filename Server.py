@@ -27,31 +27,42 @@ class Server(Node):
         print(connection.seq_num)
         self.connection.sendGoBackN(self.file.segments, connection.address[0], connection.address[1])
 
+    def print_connection_buffer(self):
+        print("kontol")
+
     def __event_loop(self):
+        # self.connection.handler = self.print_connection_buffer
+        self.connection.startListening()
         while self.running:
-            data, client_addr = self.connection.listen()
-            self.connection.send("AVAILABLE".encode(), client_addr[0], client_addr[1])
+            try:
+                self.connection.listen(MessageInfo("a", 5, Segment(1, 1, 1, b'a')), timeout=1)
+            except TimeoutError as e:
+                print("Timeout!")
+                print(self.connection.connection_buffer)
+            # pass
+            # data, client_addr = self.connection.listen()
+            # self.connection.send("AVAILABLE".encode(), client_addr[0], client_addr[1])
 
-            self.client_list.append(client_addr)
-            Terminal.log(f"Connection made with {client_addr[0]}:{client_addr[1]}")
-            self.connection.setTimeout(None)
+            # self.client_list.append(client_addr)
+            # Terminal.log(f"Connection made with {client_addr[0]}:{client_addr[1]}")
+            # self.connection.setTimeout(None)
             
-            userInput = Terminal.input("Listen for more? (y/N)")
+            # userInput = Terminal.input("Listen for more? (y/N)")
             
 
-            if(userInput != "N"):
-                continue
+            # if(userInput != "N"):
+            #     continue
             
-            print(self.client_list)
-            for client_address in self.client_list:
-                connection: OncomingConnection = self.connection.requestHandshake(client_address[0], client_address[1])
-                if (connection != None and connection.valid):
-                    Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
-                    self.send_file(connection)
-                    # Thread(target=self.send_file, args=[connection]).start()
-                else:
-                    Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
-            self.client_list.clear()
+            # print(self.client_list)
+            # for client_address in self.client_list:
+            #     connection: OncomingConnection = self.connection.requestHandshake(client_address[0], client_address[1])
+            #     if (connection != None and connection.valid):
+            #         Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
+            #         self.send_file(connection)
+            #         # Thread(target=self.send_file, args=[connection]).start()
+            #     else:
+            #         Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
+            # self.client_list.clear()
 
     def run(self):
         self.running = True
