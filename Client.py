@@ -11,7 +11,7 @@ from message.MessageQuery import MessageQuery
 
 
 class Client(Node):
-    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8081, server_port: int = 8000) -> None:
+    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8083, server_port: int = 8000) -> None:
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
         self.ip: str = ip
