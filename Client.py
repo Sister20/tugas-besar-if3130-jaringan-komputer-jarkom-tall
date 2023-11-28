@@ -46,8 +46,9 @@ class Client(Node):
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client("Outb.png")
-    Thread(target=client.run).start()
+    for i in range(5):
+        client = Client(f"Out{i}.png", port=8080 + i)
+        Thread(target=client.run).start()
 
     try:
         while client.running:
