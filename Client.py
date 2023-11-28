@@ -33,6 +33,8 @@ class Client(Node):
             response, buffer = self.connection.receiveGoBackN(response)
             for buff in buffer:
                 self.output_file.write(buff)
+            connection: OncomingConnection = self.connection.acceptTeardown(response.seq_num)
+            connection: OncomingConnection = self.connection.requestTeardown(connection.address[0], connection.address[1], connection.seq_num)
         else:
             if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")

@@ -65,15 +65,18 @@ class Connection:
 
     def listenerThread(self):
         while self.listening:
-            data, client_address = self.socket.recvfrom(32768)
             try:
-                message = MessageInfo(ip = client_address[0], port = client_address[1], segment = Segment.unpack(data)[0])
-                if(not message.segment.is_valid_checksum()): raise struct.error
+                data, client_address = self.socket.recvfrom(32768)
+                try:
+                    message = MessageInfo(ip = client_address[0], port = client_address[1], segment = Segment.unpack(data)[0])
+                    if(not message.segment.is_valid_checksum()): raise struct.error
 
-                self.connection_buffer.append(message)
-                if(self.handler): self.handler()
-            except struct.error:
-                print("bad packet")
+                    self.connection_buffer.append(message)
+                    if(self.handler): self.handler()
+                except struct.error:
+                    print("bad packet")
+                    pass
+            except OSError as e:
                 pass
 
     def stopListening(self):
