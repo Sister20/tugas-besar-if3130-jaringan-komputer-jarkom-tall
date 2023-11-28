@@ -27,6 +27,7 @@ class Server(Node):
 
             if (request.valid):
                 Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL, "Handshake")
+                self.connection.sendGoBackN(self.file.segments, request.address[0], request.address[1])
             else:
                 if request.error_code == OncomingConnection.ERR_TIMEOUT:
                     Terminal.log(f"Connection timeout with {request.address[0]}:{request.address[1]}", Terminal.CRITICAL_SYMBOL)
@@ -50,7 +51,7 @@ class Server(Node):
 
 if __name__ == "__main__":
     print("Starting main in server")
-    server = Server("Test.png")
+    server = Server("test.txt")
     server.run()
 
     try:

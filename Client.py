@@ -25,6 +25,7 @@ class Client(Node):
         response: OncomingConnection = self.connection.requestHandshake("<broadcast>", self.server_port)
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
+            self.connection.receiveGoBackN(response)
         else:
             if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
