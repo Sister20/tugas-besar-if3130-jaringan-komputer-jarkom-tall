@@ -312,7 +312,7 @@ class TCPConnection(Connection):
             # print("LAR:", LAR)
             while LFS - LAR <= SWS and LFS < len(messages):
                 # print("Sending data")
-                # time.sleep(0.1)
+                time.sleep(0.1)
 
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(

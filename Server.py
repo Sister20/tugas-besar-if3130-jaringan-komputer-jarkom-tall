@@ -53,7 +53,7 @@ class Server(Node):
 
 if __name__ == "__main__":
     print("Starting main in server")
-    server = Server("test.txt")
+    server = Server("test.png")
     server.run()
 
     try:

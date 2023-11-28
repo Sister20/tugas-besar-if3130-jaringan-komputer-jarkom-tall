@@ -46,7 +46,7 @@ class Client(Node):
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client("Out.txt")
+    client = Client("Out.png")
     Thread(target=client.run).start()
 
     try:
