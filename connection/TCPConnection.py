@@ -386,12 +386,16 @@ class TCPConnection(Connection):
                     Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.INFO_SYMBOL,
                                     f"INCOMING NUM={data.ack_num}")
 
-                    # if not metadata
-                    if (data.flags != (SegmentFlag.FLAG_RST | SegmentFlag.FLAG_FIN)):
-                        buffer.append(data)
-                    else:
+                    # if metadata
+                    if  (data.flags == (SegmentFlag.FLAG_RST | SegmentFlag.FLAG_FIN)):
                         metadata = data.payload.decode().split(FileMark.METADATA)
                         Terminal.log(f'Received file metadata: name = {metadata[0]}, extension = {metadata[1]}, size = {metadata[2]}', Terminal.INFO_SYMBOL)
+                    # if eof
+                    elif (data.flags == (SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_FIN)):
+                        Terminal.log(f'Received EOF', Terminal.INFO_SYMBOL)
+                        return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), buffer
+                    else:
+                        buffer.append(data.payload)
 
         except struct.error as e:
             print(e)
