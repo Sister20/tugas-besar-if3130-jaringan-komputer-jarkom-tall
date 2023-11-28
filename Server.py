@@ -78,24 +78,16 @@ class Server(Node):
         self.file.close()
         self.connection.close()
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument('port', type=int, default="", help='Server port')
-    parser.add_argument('served_filepath', type=str, default="", help='Served file path')
-    args = parser.parse_args()
+print("Running")
+parser = argparse.ArgumentParser(description='Server')
+parser.add_argument('port', type=int, default="", help='Server port')
+parser.add_argument('served_filepath', type=str, default="", help='Served file path')
+args = parser.parse_args()
 
-    if not os.path.exists(args.served_filepath):
-        Terminal.log(f"File {args.served_filepath} not found", Terminal.CRITICAL_SYMBOL, "Error")
-        exit(1)
+if not os.path.exists(args.served_filepath):
+    Terminal.log(f"File {args.served_filepath} not found", Terminal.CRITICAL_SYMBOL, "Error")
+    exit(1)
 
-    print("Starting main in server")
-    # server = Server("test.png")
-    server = Server(args.served_filepath, port=args.port)
-    server.run()
-
-    try:
-        while server.running:
-            pass
-    except KeyboardInterrupt:
-        Terminal.log("Keyboard interrupt received. Stopping", Terminal.CRITICAL_SYMBOL)
-        server.stop()
+print("Starting main in server")
+server = Server(args.served_filepath, port=args.port)
+server.run()
