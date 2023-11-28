@@ -5,10 +5,10 @@ from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
-# from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 from file.SenderFile import SenderFile
 from file.ReceiverFile import ReceiverFile
+from message.MessageQuery import MessageQuery
 
 
 class Server(Node):
@@ -31,11 +31,11 @@ class Server(Node):
         print("kontol")
 
     def __event_loop(self):
-        # self.connection.handler = self.print_connection_buffer
+        self.connection.handler = self.print_connection_buffer
         self.connection.startListening()
         while self.running:
             try:
-                self.connection.listen(MessageInfo("a", 5, Segment(1, 1, 1, b'a')), timeout=1)
+                self.connection.listen(timeout=5)
             except TimeoutError as e:
                 print("Timeout!")
                 print(self.connection.connection_buffer)

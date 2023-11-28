@@ -21,23 +21,23 @@ class Client(Node):
         self.output_file = ReceiverFile(output_file_path)
 
     def run(self):
-        self.connection.startListening()
+        # self.connection.startListening()
         self.connection.send("DISCOVER".encode(), "<broadcast>", self.server_port)
-        data, server_addr = self.connection.listen()
-        Terminal.log(f"Server found at {server_addr[0]}:{server_addr[1]}")
+        # data, server_addr = self.connection.listen()
+        # Terminal.log(f"Server found at {server_addr[0]}:{server_addr[1]}")
 
-        self.connection.setTimeout(None)
-        response: OncomingConnection = self.connection.acceptHandshake(server_addr)
-        if (response.valid):
-            Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
-            print("Listening")
-            response, buffer = self.connection.receiveGoBackN(response)
-            for buff in buffer:
-                self.output_file.write(buff)
-        else:
-            if (response.error_code == OncomingConnection.ERR_TIMEOUT):
-                Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
-        self.stop()
+        # self.connection.setTimeout(None)
+        # response: OncomingConnection = self.connection.acceptHandshake(server_addr)
+        # if (response.valid):
+        #     Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
+        #     print("Listening")
+        #     response, buffer = self.connection.receiveGoBackN(response)
+        #     for buff in buffer:
+        #         self.output_file.write(buff)
+        # else:
+        #     if (response.error_code == OncomingConnection.ERR_TIMEOUT):
+        #         Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
+        # self.stop()
 
     def stop(self):
         self.running = False
