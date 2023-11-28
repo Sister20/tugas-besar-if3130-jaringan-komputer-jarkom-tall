@@ -41,7 +41,7 @@ class Segment():
 
     @staticmethod
     def fin(seq_num: int):
-        return Segment(SegmentFlag.FLAG_FIN, seq_num, 0, None)
+        return Segment(SegmentFlag.FLAG_FIN, seq_num, 0, "".encode())
 
     @staticmethod
     def fin_ack(seq_num: int, ack_num: int):

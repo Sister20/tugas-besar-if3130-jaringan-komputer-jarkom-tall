@@ -30,7 +30,9 @@ class Server(Node):
         print("Sending file with connection: ", seq_num, ack_num)
         file: SenderFile = SenderFile(self.served_file_path)
         file.set_num(connection.seq_num, ack_num)
-        self.connection.sendGoBackN(file.segments, ip, port)
+        connection = self.connection.sendGoBackN(file.segments, ip, port)
+        connection = self.connection.requestTeardown(ip, port, connection.seq_num + 1)
+        connection = self.connection.acceptTeardown(connection.seq_num)
 
     def __event_loop(self):
         self.connection.startListening()
@@ -101,6 +103,8 @@ class Server(Node):
                     response, buffer = self.connection.receiveGoBackN(response)
                     for buff in buffer:
                         self.output_file.write(buff)
+                    connection: OncomingConnection = self.connection.acceptTeardown(response.seq_num)
+                    connection: OncomingConnection = self.connection.requestTeardown(connection.address[0], connection.address[1], connection.seq_num)
                 else:
                     if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                         Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")

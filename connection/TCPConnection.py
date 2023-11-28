@@ -115,7 +115,7 @@ class TCPConnection(Connection):
         
         retries = Config.SEND_RETRIES
         try:
-            Terminal.log(f"Sending FIN request to {to_ip}:{to_port}", Terminal.ALERT_SYMBOL)
+            Terminal.log(f"Sending FIN request to {to_ip}:{to_port}", Terminal.ALERT_SYMBOL, f"TEARDOWN NUM={fin_seq_num}")
             self.socket.sendto(Segment.fin(fin_seq_num).pack(), to_address)
 
             while retries > 0:
@@ -127,32 +127,40 @@ class TCPConnection(Connection):
                 ), Config.TEARDOWN_TIMEOUT)
 
                 Terminal.log(f"Accepted FIN-ACK from {response.ip}:{response.port}",
-                                Terminal.ALERT_SYMBOL)
-                break
+                                Terminal.ALERT_SYMBOL, f"TEARDOWN NUM={response.segment.ack_num}")
+                
+                return OncomingConnection(True, to_address, fin_seq_num + 1, response.segment.seq_num + 1)
 
         except TimeoutError:
             retries -= 1
             Terminal.log(f"Teardown timeout", Terminal.CRITICAL_SYMBOL, "Teardown")
-
+            return OncomingConnection(False, to_address, 0, 0)
+    
     def acceptTeardown(self, fin_ack_seq_num: int):
         Terminal.log("Accepting teardown", Terminal.ALERT_SYMBOL)
         retries = Config.SEND_RETRIES
-        try:
-            request = self.listen(MessageQuery(
-                flags= SegmentFlag.FLAG_FIN
-            ), Config.TEARDOWN_TIMEOUT)
+        while retries > 0:
+            try:
+                request = self.listen(MessageQuery(
+                    flags= SegmentFlag.FLAG_FIN
+                ), Config.TEARDOWN_TIMEOUT)
 
-            Terminal.log(f"Received FIN from {request.ip}:{request.port}", Terminal.ALERT_SYMBOL,
-                        "Teardown NUM=" + str(request.segment.seq_num))
+                Terminal.log(f"Received FIN from {request.ip}:{request.port}", Terminal.ALERT_SYMBOL,
+                            "Teardown NUM=" + str(request.segment.ack_num))
 
-            ack_num = request.segment.seq_num + 1
+                ack_num = request.segment.seq_num + 1
 
-            self.socket.sendto(Segment.fin_ack(fin_ack_seq_num, ack_num).pack(), (request.ip, request.port))
-            Terminal.log(f"Sending FIN-ACK to {request.ip}:{request.port}", Terminal.ALERT_SYMBOL,
-                        "Teardown NUM=" + str(fin_ack_seq_num))
-        except TimeoutError:
-            retries -= 1
-            Terminal.log(f"Teardown timeout", Terminal.CRITICAL_SYMBOL, "Teardown")
+                self.socket.sendto(Segment.fin_ack(fin_ack_seq_num, ack_num).pack(), (request.ip, request.port))
+                Terminal.log(f"Sending FIN-ACK to {request.ip}:{request.port}", Terminal.ALERT_SYMBOL,
+                            "Teardown NUM=" + str(fin_ack_seq_num))
+                
+                return OncomingConnection(True, (request.ip, request.port), fin_ack_seq_num + 1, ack_num)
+            
+            except TimeoutError:
+                retries -= 1
+                Terminal.log(f"Teardown timeout", Terminal.CRITICAL_SYMBOL, "Teardown")
+
+        return OncomingConnection(False, None, 0, 0)
 
     # ARQ stop and wait gatau gak sengaja kebikin
     def sendStopNWait(self, message: MessageInfo, timeout: int = Config.RETRANSMIT_TIMEOUT) -> OncomingConnection:
@@ -255,7 +263,7 @@ class TCPConnection(Connection):
             if LFS >= len(messages):
                 print("Done!")
                 last_message = messages[len(messages) - 1]
-                return OncomingConnection(True, (ip, port), last_message.ack_num, last_message.ack_num + 1)
+                return OncomingConnection(True, (ip, port), last_message.seq_num + 1, last_message.ack_num)
 
     def receiveGoBackN(self, oncomingConnection: OncomingConnection, timeout: int = 30,) -> (OncomingConnection, Segment):
         buffer = []
@@ -291,7 +299,7 @@ class TCPConnection(Connection):
                     # if eof
                     elif (response.segment.flags == (SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_FIN)):
                         Terminal.log(f'Received EOF', Terminal.INFO_SYMBOL)
-                        return OncomingConnection(True, (response.ip, response.port), response.segment.ack_num, response.segment.seq_num + 1), buffer
+                        return OncomingConnection(True, (response.ip, response.port), response.segment.ack_num + 1, response.segment.seq_num + 1), buffer
                     else:
                         buffer.append(response.segment.payload.rstrip(b'\x00'))
 
