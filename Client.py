@@ -8,6 +8,7 @@ from connection.TCPConnection import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 from file.ReceiverFile import ReceiverFile
 from message.MessageQuery import MessageQuery
+import argparse
 
 
 class Client(Node):
@@ -45,10 +46,18 @@ class Client(Node):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Client')
+    parser.add_argument('port', type=int, default="", help='Client port')
+    parser.add_argument('server_port', type=int, default="", help='Server port')
+    parser.add_argument('output_file_path', type=str, default="", help='Output file path')
+    args = parser.parse_args()
+
     print("Starting main in client")
-    for i in range(5):
-        client = Client(f"Out{i}.png", port=8080 + i)
-        Thread(target=client.run).start()
+    client = Client(args.output_file_path, port=args.port, server_port=args.server_port)
+    Thread(target=client.run).start()
+    # for i in range(5):
+    #     client = Client(f"Out{i}.png", port=8080 + i)
+    #     Thread(target=client.run).start()
 
     try:
         while client.running:

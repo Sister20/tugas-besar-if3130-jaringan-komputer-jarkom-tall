@@ -9,7 +9,8 @@ from connection.OncomingConnection import OncomingConnection
 from file.SenderFile import SenderFile
 from file.ReceiverFile import ReceiverFile
 from message.MessageQuery import MessageQuery
-
+import argparse
+import os
 
 class Server(Node):
     def __init__(self, served_filepath: str, ip: str = '0.0.0.0', port: int = 8000) -> None:
@@ -77,8 +78,18 @@ class Server(Node):
         self.connection.close()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Server')
+    parser.add_argument('port', type=int, default="", help='Server port')
+    parser.add_argument('served_filepath', type=str, default="", help='Served file path')
+    args = parser.parse_args()
+
+    if not os.path.exists(args.served_filepath):
+        Terminal.log(f"File {args.served_filepath} not found", Terminal.CRITICAL_SYMBOL, "Error")
+        exit(1)
+
     print("Starting main in server")
-    server = Server("test.png")
+    # server = Server("test.png")
+    server = Server(args.served_filepath, port=args.port)
     server.run()
 
     try:
