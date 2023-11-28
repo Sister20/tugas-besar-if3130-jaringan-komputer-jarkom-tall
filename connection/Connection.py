@@ -19,13 +19,15 @@ class Connection:
 
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Reuse address
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Enable broadcasting
+        self.socket.settimeout(None)
         self.socket.bind((self.ip, self.port))
+        self.default_timeout = 30
 
-        self.connection_buffer = []
-        self.handler = handler
-        self.listening = True
-        self.listener = Thread(target=self.listenerThread)
-        self.garbage_collector = Thread(target=self.garbageThread)
+        self.connection_buffer: list[MessageInfo] = []
+        self.handler: callable = handler
+        self.listening: bool = False
+        self.listener: Thread = Thread(target=self.listenerThread)
+        self.garbage_collector: Thread = Thread(target=self.garbageThread)
 
     def garbageThread(self):
         while self.listening:
@@ -44,7 +46,9 @@ class Connection:
         while self.listening:
             data, client_address = self.socket.recvfrom(32768)
             try:
-                message = MessageInfo(ip = client_address[0], port = client_address[1], segment = data)
+                message = MessageInfo(ip = client_address[0], port = client_address[1], segment = Segment.unpack(data)[0])
+                if(not message.segment.is_valid_checksum()): raise struct.error
+
                 self.connection_buffer.append(message)
                 if(self.handler): self.handler()
             except struct.error:
@@ -69,7 +73,7 @@ class Connection:
         remote_address = (ip_remote, port_remote)
         self.socket.sendto(data, remote_address)
 
-    def listen(self, query: MessageQuery = None, timeout: int = None):
+    def listen(self, query: MessageQuery = None, timeout: int = None) -> MessageInfo:
         retval = None
         if(timeout):
             start_time = time.time()
@@ -95,9 +99,5 @@ class Connection:
         # return self.socket.recvfrom(32768)
 
     def close(self) -> None:
-        self.stopListening()
         self.socket.close()
-
-    def setTimeout(self, time_seconds: float) -> None:
-        # NOTE: use None to set for no timeouts
-        self.socket.settimeout(time_seconds)
+        self.stopListening()

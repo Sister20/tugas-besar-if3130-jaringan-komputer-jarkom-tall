@@ -18,16 +18,16 @@ class MessageQuery:
             if(message.port != self.port):
                 return False
         if(self.flags is not None):
-            if(message.flags != self.flags):
+            if(message.segment.flags != self.flags):
                 return False
         if(self.seq_num is not None):
-            if(message.seq_num != self.seq_num):
+            if(message.segment.seq_num != self.seq_num):
                 return False
         if(self.ack_num is not None):
-            if(message.ack_num != self.ack_num):
+            if(message.segment.ack_num != self.ack_num):
                 return False
         if(self.payload is not None):
-            if(message.payload != self.payload):
+            if(message.segment.payload.rstrip(b'\x00') != self.payload):
                 return False
             
         return True
