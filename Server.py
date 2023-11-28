@@ -46,7 +46,6 @@ class Server(Node):
                 connection: OncomingConnection = self.connection.requestHandshake(client_address[0], client_address[1])
                 if (connection != None and connection.valid):
                     Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
-                    # self.send_file(connection)
                     Thread(target=self.send_file, args=[connection]).start()
                 else:
                     Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")

@@ -78,7 +78,7 @@ class TCPConnection(Connection):
                 ip = target_address[0],
                 port = target_address[1],
                 flags = SegmentFlag.FLAG_SYN
-            ), Config.HANDSHAKE_TIMEOUT)
+            ), timeout)
         Terminal.log(f"Received SYN from {syn_message.ip}:{syn_message.port}", Terminal.ALERT_SYMBOL,
                         "Handshake NUM=" + str(seq_num))
 
@@ -206,7 +206,7 @@ class TCPConnection(Connection):
                 ip = message.ip,
                 port = message.port,
                 flags = SegmentFlag.FLAG_ACK,
-            ))
+            ), Config.RETRANSMIT_TIMEOUT)
 
             if(last_ack[0] < response.segment.ack_num - 1): last_ack[0] = response.segment.ack_num -1
             Terminal.log(f"Segment {message.segment.seq_num} received ACK from {message.ip}:{message.port} with ack {response.segment.ack_num}, last ack is {last_ack[0]}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={response.segment.ack_num}")
@@ -228,7 +228,7 @@ class TCPConnection(Connection):
 
         while True:
             while LFS - LAR <= SWS and LFS < len(messages):
-                time.sleep(0.2)
+                time.sleep(0.1)
 
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(

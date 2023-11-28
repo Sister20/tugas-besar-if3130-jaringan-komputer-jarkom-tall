@@ -26,7 +26,7 @@ class Client(Node):
         discover = self.connection.listen(MessageQuery(payload=b'AVAILABLE'), 30)
         Terminal.log(f"Server found at {discover.ip}:{discover.port}")
 
-        response: OncomingConnection = self.connection.acceptHandshake((discover.ip, discover.port))
+        response: OncomingConnection = self.connection.acceptHandshake((discover.ip, discover.port), None)
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
             print("Listening")
