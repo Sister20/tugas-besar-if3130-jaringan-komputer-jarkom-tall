@@ -47,10 +47,14 @@ class SenderFile:
             segment = Segment(SegmentFlag.FLAG_NONE, SenderFile.dummy_seq_num, SenderFile.dummy_ack_num, self.__get_chunk(i))
             segments.append(segment)
 
+        # FIN SYN flag for eof flag hehe (ngakalin)
+        eofSegment = Segment(SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_FIN, SenderFile.dummy_seq_num, SenderFile.dummy_ack_num, "".encode())
+        segments.append(eofSegment)
+
         return segments
 
-    def set_seq_num(self, handshake_seq_num: int, handshake_ack_num: int) -> None:
-        for i in range(self.chunk_count):
+    def set_num(self, handshake_seq_num: int, handshake_ack_num: int) -> None:
+        for i in range(len(self.segments)):
             # Ex:
             # Handshake: seq num SYN => 0, seq num ACK => 1
             # First payload (idx 0) will be sent with seq num 1 + 0 + 1 = 2
