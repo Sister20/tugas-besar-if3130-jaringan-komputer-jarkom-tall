@@ -395,7 +395,8 @@ class TCPConnection(Connection):
                         Terminal.log(f'Received EOF', Terminal.INFO_SYMBOL)
                         return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), buffer
                     else:
-                        buffer.append(data.payload)
+                        buffer.append(data.payload.rstrip(b'\x00'))
+
 
         except struct.error as e:
             print(e)
