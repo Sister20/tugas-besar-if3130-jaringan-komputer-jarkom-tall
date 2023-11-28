@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  jarkumtil:
+    container_name: jarkumtil
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '8081:8081'
+    stdin_open: true
+    tty: true
+    networks:
+      - dockerNet
+
+networks:
+  dockerNet:
+    external:
+      true

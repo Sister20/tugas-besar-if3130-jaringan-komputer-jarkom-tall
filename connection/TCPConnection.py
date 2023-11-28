@@ -32,6 +32,8 @@ class TCPConnection(Connection):
                 if (client_address == ip_remote or ip_remote == '<broadcast>'):
                     try:
                         data, checksum = Segment.unpack(data)
+                        #TODO: Checksum for SYN/ACK?
+
                         if data.flags == SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK:
                             Terminal.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}",
                                          Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
@@ -89,6 +91,8 @@ class TCPConnection(Connection):
 
                     try:
                         data, checksum = Segment.unpack(data)
+                        #TODO: Checksum for ACK?
+
                     except:
                         Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
                                      Terminal.ALERT_SYMBOL, "Error")
@@ -128,6 +132,8 @@ class TCPConnection(Connection):
                 if (res_address == to_ip):
                     try:
                         data, checksum = Segment.unpack(data)
+                        #TODO: Checksum for ACK?
+                        
                         if data.flags == SegmentFlag.FLAG_FIN | SegmentFlag.FLAG_ACK:
                             Terminal.log(f"Accepted FIN-ACK from {res_address[0]}:{res_address[1]}",
                                          Terminal.ALERT_SYMBOL)
@@ -177,6 +183,8 @@ class TCPConnection(Connection):
                 if client_address == (message.ip, message.port):
                     try:
                         data, checksum = Segment.unpack(response)
+                        #TODO: Checksum for ACK?
+
                         if data.flags == SegmentFlag.FLAG_ACK:
                             if data.ack_num == message.segment.seq_num + 1:
                                 Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
@@ -249,70 +257,128 @@ class TCPConnection(Connection):
                 # print("Assumed unsuccessful")
                 return OncomingConnection(False, None, 0, 0, OncomingConnection.ERR_TIMEOUT), None
 
-    def sendGoBackN(self, message: MessageInfo) -> OncomingConnection:
+    def goBackNSend1(self, message: MessageInfo) -> OncomingConnection:
         previousTimeout = self.socket.gettimeout()
         self.setTimeout(Config.RETRANSMIT_TIMEOUT)
+        
+        Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={message.segment.seq_num}")
+        
+        try:
+            self.send(message.segment.pack(), message.ip, message.port)
+            response, client_address = self.listen()
 
+            if client_address == (message.ip, message.port):
+                try:
+                    data, checksum = Segment.unpack(response)
+                    #TODO: Checksum for ACK?
+                    if data.flags == SegmentFlag.FLAG_ACK:
+                        if data.ack_num == message.segment.seq_num + 1:
+                            Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
+                            self.setTimeout(previousTimeout)
+                            return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1)
+                        
+                except struct.error as e:
+                    print(e)
+
+        except TimeoutError:
+                print("Timeout happened at sequence: ", message.segment.seq_num)
+                self.setTimeout(previousTimeout)
+                raise TimeoutError(message.segment.seq_num)
+
+    def sendGoBackN(self, bytes, message) -> OncomingConnection:
         window_size = Config.WINDOW_SIZE
         window = []
         window_init = 1
         retries = Config.SEND_RETRIES
 
-        while retries > 0:
+        done = False
+        threads = []
+        
+        len = len(window)
+        window_base = 0
+        while not done and retries > 0:
             try:
-                response, client_address = self.listen()
-                if response is not None and client_address == (message.ip, message.port):
-                    data, checksum = Segment.unpack(response)
-                    if data.flags == SegmentFlag.FLAG_ACK:
-                        if data.ack_num == window[0].segment.seq_num + 1:
-                            Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
-                                         f"OUTGOING NUM={data.ack_num}")
-                            window.pop(0)
-                            # retries = Config.SEND_RETRIES
-                            continue
-                    else :
-                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Error")
-                        continue
+
+                for i in range(window_size):
+                    message = window[window_base + i]
+                    threads.append(Thread(target=self.goBackNSend1, args=message).start()) #TODO: Message?
+
+                for i in range(window_size):
+                    threads[i].join()
 
                 if window_init == 0 and len(window) == 0:
                     return OncomingConnection(True, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num)
-
-                if len(window) < window_size:
-                    Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
-                                 f"OUTGOING NUM={message.segment.seq_num}")
-                    self.send(message.segment.pack(), message.ip, message.port)
-                    window.append(message)
-                    window_init = 0
-                    message = message.next()
-                    # retries = Config.SEND_RETRIES
-                    continue
-                else :
-                    response, client_address = self.listen()
-                    data, checksum = Segment.unpack(response)
-                    if data.flags == SegmentFlag.FLAG_ACK:
-                        if data.ack_num == window[0].segment.seq_num + 1:
-                            Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
-                                         f"OUTGOING NUM={data.ack_num}")
-                            window.pop(0)
-                            # retries = Config.SEND_RETRIES
-
-                            continue
-                    else :
-                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Error")
-                        continue
-            except TimeoutError:
-                print("Response timeout!")
-                retries -= 1
-                if(retries > 0):
-                    print("Retrying")
-                else:
-                    print("Stopped retrying")
-                    retries = Config.SEND_RETRIES
-                    continue
-        self.setTimeout(previousTimeout)
+                
+            except TimeoutError as e:
+                window_base = int(e)
+                
         return OncomingConnection(False, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num, OncomingConnection.ERR_TIMEOUT)
+
+
+    # def sendGoBackN(self, message: MessageInfo) -> OncomingConnection:
+    #     previousTimeout = self.socket.gettimeout()
+    #     self.setTimeout(Config.RETRANSMIT_TIMEOUT)
+
+    #     window_size = Config.WINDOW_SIZE
+    #     window = []
+    #     window_init = 1
+    #     retries = Config.SEND_RETRIES
+
+    #     while retries > 0:
+    #         try:
+    #             response, client_address = self.listen()
+    #             if response is not None and client_address == (message.ip, message.port):
+    #                 data, checksum = Segment.unpack(response)
+    #                 if data.flags == SegmentFlag.FLAG_ACK:
+    #                     if data.ack_num == window[0].segment.seq_num + 1:
+    #                         Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
+    #                                      f"OUTGOING NUM={data.ack_num}")
+    #                         window.pop(0)
+    #                         # retries = Config.SEND_RETRIES
+    #                         continue
+    #                 else :
+    #                     Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
+    #                                  Terminal.ALERT_SYMBOL, "Error")
+    #                     continue
+
+    #             if window_init == 0 and len(window) == 0:
+    #                 return OncomingConnection(True, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num)
+
+    #             if len(window) < window_size:
+    #                 Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
+    #                              f"OUTGOING NUM={message.segment.seq_num}")
+    #                 self.send(message.segment.pack(), message.ip, message.port)
+    #                 window.append(message)
+    #                 window_init = 0
+    #                 message = message.next()
+    #                 # retries = Config.SEND_RETRIES
+    #                 continue
+    #             else :
+    #                 response, client_address = self.listen()
+    #                 data, checksum = Segment.unpack(response)
+    #                 if data.flags == SegmentFlag.FLAG_ACK:
+    #                     if data.ack_num == window[0].segment.seq_num + 1:
+    #                         Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL,
+    #                                      f"OUTGOING NUM={data.ack_num}")
+    #                         window.pop(0)
+    #                         # retries = Config.SEND_RETRIES
+
+    #                         continue
+    #                 else :
+    #                     Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
+    #                                  Terminal.ALERT_SYMBOL, "Error")
+    #                     continue
+    #         except TimeoutError:
+    #             print("Response timeout!")
+    #             retries -= 1
+    #             if(retries > 0):
+    #                 print("Retrying")
+    #             else:
+    #                 print("Stopped retrying")
+    #                 retries = Config.SEND_RETRIES
+    #                 continue
+    #     self.setTimeout(previousTimeout)
+    #     return OncomingConnection(False, (message.ip, message.port), message.segment.seq_num, message.segment.ack_num, OncomingConnection.ERR_TIMEOUT)
 
     # def receiveGoBackN(self, timeout: int = 30) -> (OncomingConnection, Segment):
     #     previousTimeout = self.socket.gettimeout()
