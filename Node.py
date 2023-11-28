@@ -14,6 +14,4 @@ class Node:
 
     def stop(self):
         raise NotImplementedError("Node is an abstract class")
-
-    def handle_message(self, segment: Segment):
-        raise NotImplementedError("Node is an abstract class")
+    

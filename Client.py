@@ -5,28 +5,27 @@ from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
-# from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 from file.ReceiverFile import ReceiverFile
+from message.MessageQuery import MessageQuery
 
 
 class Client(Node):
-    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8082, server_port: int = 8000) -> None:
+    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8083, server_port: int = 8000) -> None:
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
-        self.connection.setTimeout(30)  # Default timeout is 30s
         self.ip: str = ip
         self.port: int = port
         self.server_port: int = server_port
         self.output_file = ReceiverFile(output_file_path)
 
     def run(self):
-        self.connection.send("DISCOVER".encode(), "<broadcast>", self.server_port)
-        data, server_addr = self.connection.listen()
-        Terminal.log(f"Server found at {server_addr[0]}:{server_addr[1]}")
+        self.connection.startListening()
+        self.connection.send(Segment(0, 0, 0, b'DISCOVER').pack(), "<broadcast>", self.server_port)
+        discover = self.connection.listen(MessageQuery(payload=b'AVAILABLE'), 30)
+        Terminal.log(f"Server found at {discover.ip}:{discover.port}")
 
-        self.connection.setTimeout(None)
-        response: OncomingConnection = self.connection.acceptHandshake(server_addr)
+        response: OncomingConnection = self.connection.acceptHandshake((discover.ip, discover.port), None)
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
             print("Listening")
@@ -36,6 +35,7 @@ class Client(Node):
         else:
             if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
+        print("Done")
         self.stop()
 
     def stop(self):
@@ -43,15 +43,12 @@ class Client(Node):
         self.output_file.close()
         self.connection.close()
 
-    def handle_message(self, segment: Segment):
-        # TODO: Implement
-        pass
-
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client("Out.png")
-    Thread(target=client.run).start()
+    for i in range(5):
+        client = Client(f"Out{i}.png", port=8080 + i)
+        Thread(target=client.run).start()
 
     try:
         while client.running:

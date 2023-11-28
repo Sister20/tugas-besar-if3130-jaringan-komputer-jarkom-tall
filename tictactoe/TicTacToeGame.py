@@ -95,8 +95,7 @@ class TicTacToeGame():
         # TODO: use proper messaging when listening
         self.connectionInfo, data = self.connection.receiveStopNWait(None)
         # data, peer_address = self.connection.listen()
-        data, checksum = Segment.unpack_str_payload(data)
-        data = data.payload.decode()
+        data = data.strip(b'\x00').decode()
         print(data)
 
         self.board.put(self.opponent_symbol, int(data[0]), int(data[1]))
@@ -120,7 +119,7 @@ class TicTacToeGame():
             winner, winner_symbol = self.board.check_winner(self.own_symbol, self.opponent_symbol)
             count += 1
 
-            if count > 10 or winner:
+            if count > 9 or winner:
                 break
 
             self.wait_move()
@@ -169,8 +168,7 @@ class TicTacToeGame():
 
             if self.own_symbol == "N":
                 self.connectionInfo, data = self.connection.receiveStopNWait(None)
-                data, checksum = Segment.unpack_str_payload(data)
-                data = data.payload.decode()                
+                data = data.strip(b'\x00').decode()                
                 if(data == "X"):
                     print(f"Your opponent chooses {data}")
                     self.assign_symbol("O")
@@ -199,8 +197,8 @@ class TicTacToeGame():
             # TODO: use proper messaging when listening
             # response, client_address = self.connection.listen()
             self.connectionInfo, data = self.connection.receiveStopNWait(None)
-            data, checksum = Segment.unpack_str_payload(data)
-            data = data.payload.decode()
+            data = data.strip(b'\x00').decode()
+            print(data == "N")
             if(data == "X"):
                 print(f"Your opponent chooses {data}")
                 self.assign_symbol("O")

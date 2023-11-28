@@ -27,12 +27,6 @@ class Segment():
         seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
         return cls(flags, seq_num, ack_num, payload), checksum
 
-    @classmethod
-    def unpack_str_payload(cls, packed_data):
-        unpacked_data = struct.unpack('>IIBBH32756s', packed_data)
-        seq_num, ack_num, flags, reserved, checksum, payload = unpacked_data
-        return cls(flags, seq_num, ack_num, payload.decode().strip('\x00').encode()), checksum
-
     @staticmethod
     def syn(seq_num: int):
         return Segment(SegmentFlag.FLAG_SYN, seq_num, 0, "".encode())
