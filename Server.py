@@ -26,14 +26,10 @@ class Server(Node):
         print(connection.seq_num)
         self.connection.sendGoBackN(self.file.segments, connection.address[0], connection.address[1])
 
-    def print_connection_buffer(self):
-        print("kontol")
-
     def __event_loop(self):
-        self.connection.handler = self.print_connection_buffer
         self.connection.startListening()
         while self.running:
-            discover = self.connection.listen()
+            discover = self.connection.listen(MessageQuery(payload=b'DISCOVER'))
             self.connection.send(Segment(0, 0, 0, b'AVAILABLE').pack(), discover.ip, discover.port)
 
             self.client_list.append((discover.ip, discover.port))
@@ -50,8 +46,8 @@ class Server(Node):
                 connection: OncomingConnection = self.connection.requestHandshake(client_address[0], client_address[1])
                 if (connection != None and connection.valid):
                     Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
-                    self.send_file(connection)
-                    # Thread(target=self.send_file, args=[connection]).start()
+                    # self.send_file(connection)
+                    Thread(target=self.send_file, args=[connection]).start()
                 else:
                     Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
             print("Done")

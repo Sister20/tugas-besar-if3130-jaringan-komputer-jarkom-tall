@@ -5,7 +5,6 @@ from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
-# from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 from file.ReceiverFile import ReceiverFile
 
@@ -17,7 +16,6 @@ class TictactoeNode(Node):
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
         self.game = TicTacToeGame(self.connection)
-        self.connection.setTimeout(30)  # Default timeout is 30s
         self.ip: str = ip
         self.port: int = port
         self.server_port: int = server_port
@@ -32,7 +30,7 @@ class TictactoeNode(Node):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
 
         return response
-        
+
     def wait_match(self):
         print(f"Waiting for a match in port {self.port}")
         request = None
@@ -52,6 +50,7 @@ class TictactoeNode(Node):
 
     def run(self):
         self.running = True
+        self.connection.startListening()
         while self.running:
             user_input = input("Would you like to wait for a match (W), find a match (F), or quit (Q)?: ")
             if(user_input == 'W'): 
@@ -63,7 +62,6 @@ class TictactoeNode(Node):
                 
                 # The acceptor receives the initiator's selection
                 print(request.address[0], request.address[1])
-                self.connection.setTimeout(None)
 
                 self.game.set_peer(request)
                 self.game.initialize_waiter()
@@ -82,8 +80,6 @@ class TictactoeNode(Node):
                 # The initiator chooses
                 print(request.address[0], request.address[1])
                 
-                self.connection.setTimeout(None)
-
                 self.game.set_peer(request)
                 self.game.initialize_finder()
                 self.game.summary()
@@ -97,7 +93,6 @@ class TictactoeNode(Node):
             else:
                 print("Invalid input!")
 
-            self.connection.setTimeout(30)
         self.stop()
 
     def stop(self):

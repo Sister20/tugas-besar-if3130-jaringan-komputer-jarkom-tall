@@ -47,6 +47,7 @@ class Connection:
             data, client_address = self.socket.recvfrom(32768)
             try:
                 message = MessageInfo(ip = client_address[0], port = client_address[1], segment = Segment.unpack(data)[0])
+                message.segment.payload = message.segment.payload.strip(b'\x00')
                 if(not message.segment.is_valid_checksum()): raise struct.error
 
                 self.connection_buffer.append(message)

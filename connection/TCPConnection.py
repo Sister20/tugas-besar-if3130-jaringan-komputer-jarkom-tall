@@ -33,11 +33,17 @@ class TCPConnection(Connection):
                 self.socket.sendto(Segment.syn(seq_num).pack(), remote_address)
 
                 Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
-                message = self.listen(MessageQuery(
-                    ip = remote_address[0],
-                    port = remote_address[1],
-                    flags = SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK
-                ), Config.HANDSHAKE_TIMEOUT)
+                if(ip_remote == "<broadcast>"):
+                    message = self.listen(MessageQuery(
+                        flags = SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK
+                    ), Config.HANDSHAKE_TIMEOUT)
+                else:
+                    message = self.listen(MessageQuery(
+                        ip = remote_address[0],
+                        port = remote_address[1],
+                        flags = SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK
+                    ), Config.HANDSHAKE_TIMEOUT)
+
                 data = message.segment
 
                 Terminal.log(f"Accepted SYN-ACK from {message.ip}:{message.port}",
@@ -59,14 +65,14 @@ class TCPConnection(Connection):
         self.socket.sendto(Segment.rst().pack(), remote_address)
         return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
 
-    def acceptHandshake(self, target_address = None) -> OncomingConnection:
+    def acceptHandshake(self, target_address = None, timeout = Config.HANDSHAKE_TIMEOUT) -> OncomingConnection:
         seq_num = randint(0, 4294967295)
 
-        print("waiting for handshake from: ", target_address)
-        if(target_address == None):
+        if(target_address is None):
+            print("waiting for handshake from: ", target_address)
             syn_message = self.listen(MessageQuery(
                 flags = SegmentFlag.FLAG_SYN
-            ), Config.HANDSHAKE_TIMEOUT)
+            ), timeout)
         else:
             syn_message = self.listen(MessageQuery(
                 ip = target_address[0],
@@ -149,7 +155,7 @@ class TCPConnection(Connection):
             Terminal.log(f"Teardown timeout", Terminal.CRITICAL_SYMBOL, "Teardown")
 
     # ARQ stop and wait gatau gak sengaja kebikin
-    def sendStopNWait(self, message: MessageInfo) -> OncomingConnection:
+    def sendStopNWait(self, message: MessageInfo, timeout: int = Config.RETRANSMIT_TIMEOUT) -> OncomingConnection:
 
         Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={message.segment.seq_num}")
         retries = Config.SEND_RETRIES
@@ -161,7 +167,7 @@ class TCPConnection(Connection):
                     ip = message.ip,
                     port = message.port,
                     ack_num = message.segment.seq_num + 1
-                ), Config.RETRANSMIT_TIMEOUT)
+                ), timeout)
 
                 Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={response.segment.ack_num}")
                 return OncomingConnection(True, (response.ip, response.port), response.segment.ack_num, response.segment.seq_num + 1)
