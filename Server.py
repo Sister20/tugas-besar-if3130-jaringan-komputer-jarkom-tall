@@ -24,9 +24,11 @@ class Server(Node):
     def __event_loop(self):
         while self.running:
             request: OncomingConnection = self.connection.acceptHandshake()
-
+            
             if (request.valid):
                 Terminal.log(f"Connection established", Terminal.ALERT_SYMBOL, "Handshake")
+                self.file.set_seq_num(request.seq_num, request.ack_num)
+                print(request.seq_num)
                 self.connection.sendGoBackN(self.file.segments, request.address[0], request.address[1])
             else:
                 if request.error_code == OncomingConnection.ERR_TIMEOUT:
@@ -51,7 +53,7 @@ class Server(Node):
 
 if __name__ == "__main__":
     print("Starting main in server")
-    server = Server("test.txt")
+    server = Server("test.png")
     server.run()
 
     try:

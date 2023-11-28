@@ -12,7 +12,7 @@ from message.SegmentFlag import SegmentFlag
 from connection.Connection import Connection
 from connection.OncomingConnection import OncomingConnection
 from random import randint
-
+import math
 
 class TCPConnection(Connection):
     def __init__(self, ip: str, port: int, handler: callable = None) -> None:
@@ -24,43 +24,46 @@ class TCPConnection(Connection):
         self.setTimeout(Config.HANDSHAKE_TIMEOUT)
         remote_address = (ip_remote, port_remote)
         Terminal.log("Initiating three way handshake", Terminal.ALERT_SYMBOL)
-        try:
-            Terminal.log(f"Sending SYN request to {ip_remote}:{port_remote}", Terminal.ALERT_SYMBOL,
-                         "Handshake NUM=" + str(seq_num))
-            self.socket.sendto(Segment.syn(seq_num).pack(), remote_address)
+        retries = Config.SEND_RETRIES
+        while retries > 0:
+            try:
+                Terminal.log(f"Sending SYN request to {ip_remote}:{port_remote}", Terminal.ALERT_SYMBOL,
+                            "Handshake NUM=" + str(seq_num))
+                self.socket.sendto(Segment.syn(seq_num).pack(), remote_address)
 
-            while True:
-                Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
-                data, client_address = self.listen()
-                if (client_address == ip_remote or ip_remote == '<broadcast>'):
-                    try:
-                        data, checksum = Segment.unpack(data)
-                        #TODO: Checksum for SYN/ACK?
+                while True:
+                    Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
+                    data, client_address = self.listen()
+                    if (client_address == ip_remote or ip_remote == '<broadcast>'):
+                        try:
+                            data, checksum = Segment.unpack(data)
+                            #TODO: Checksum for SYN/ACK?
 
-                        if data.flags == SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK:
-                            Terminal.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}",
-                                         Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
+                            if data.flags == SegmentFlag.FLAG_SYN | SegmentFlag.FLAG_ACK:
+                                Terminal.log(f"Accepted SYN-ACK from {client_address[0]}:{client_address[1]}",
+                                            Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
 
-                            ack_num = data.seq_num + 1
-                            seq_num = seq_num + 1
+                                ack_num = data.seq_num + 1
+                                seq_num = seq_num + 1
 
-                            self.socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address)
-                            Terminal.log(f"Sending ACK to {client_address[0]}:{client_address[1]}",
-                                         Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(seq_num))
+                                self.socket.sendto(Segment.ack(seq_num, ack_num).pack(), client_address)
+                                Terminal.log(f"Sending ACK to {client_address[0]}:{client_address[1]}",
+                                            Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(seq_num))
 
-                            self.setTimeout(None)
-                            return OncomingConnection(True, client_address, seq_num, ack_num)
+                                self.setTimeout(None)
+                                return OncomingConnection(True, client_address, seq_num, ack_num)
 
-                    except struct.error as e:
-                        print(e)
-                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Error")
+                        except struct.error as e:
+                            print(e)
+                            Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
+                                        Terminal.ALERT_SYMBOL, "Error")
+            except TimeoutError:
+                Terminal.log(f"Handshake timeout", Terminal.CRITICAL_SYMBOL, "Handshake")
+                retries -= 1
 
-        except TimeoutError:
-            self.socket.sendto(Segment.rst().pack(), remote_address)
-            Terminal.log(f"Handshake timeout", Terminal.CRITICAL_SYMBOL, "Handshake")
-            self.setTimeout(None)
-            return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
+        self.socket.sendto(Segment.rst().pack(), remote_address)
+        self.setTimeout(None)
+        return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
 
     def acceptHandshake(self) -> OncomingConnection:
         seq_num = randint(0, 4294967295)
@@ -86,40 +89,45 @@ class TCPConnection(Connection):
             client = client_address
 
             self.setTimeout(Config.HANDSHAKE_TIMEOUT)
-            try:
-                while True:
-                    data, client_address = self.listen()
-                    while (client_address != client):
-                        continue
+            
+            retries = Config.SEND_RETRIES
+            while retries > 0:
+                try:
+                    while True:
+                        data, client_address = self.listen()
+                        while (client_address != client):
+                            continue
 
-                    try:
-                        data, checksum = Segment.unpack(data)
-                        #TODO: Checksum for ACK?
+                        try:
+                            data, checksum = Segment.unpack(data)
+                            #TODO: Checksum for ACK?
 
-                    except:
-                        Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Error")
-                        continue
+                        except:
+                            Terminal.log(f"Received bad response from {client_address[0]}:{client_address[1]}",
+                                        Terminal.ALERT_SYMBOL, "Error")
+                            continue
 
-                    if data.flags == SegmentFlag.FLAG_ACK and data.ack_num == seq_num + 1:
-                        Terminal.log(f"Received ACK from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
+                        if data.flags == SegmentFlag.FLAG_ACK and data.ack_num == seq_num + 1:
+                            Terminal.log(f"Received ACK from {client_address[0]}:{client_address[1]}",
+                                        Terminal.ALERT_SYMBOL, "Handshake NUM=" + str(data.ack_num))
 
-                        self.setTimeout(None)
-                        return OncomingConnection(True, client_address, data.seq_num, data.ack_num)
+                            self.setTimeout(None)
+                            return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1)
 
-                    if data.flags == SegmentFlag.FLAG_RST:
-                        Terminal.log(f"Received RST from {client_address[0]}:{client_address[1]}",
-                                     Terminal.CRITICAL_SYMBOL, "Handshake")
+                        if data.flags == SegmentFlag.FLAG_RST:
+                            Terminal.log(f"Received RST from {client_address[0]}:{client_address[1]}",
+                                        Terminal.CRITICAL_SYMBOL, "Handshake")
 
-                        self.setTimeout(None)
-                        return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_RESET)
+                            self.setTimeout(None)
+                            return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_RESET)
 
-            except TimeoutError:
-                Terminal.log(f"No ACK received from {client[0]}:{client[1]}", Terminal.CRITICAL_SYMBOL, "Handshake")
+                except TimeoutError:
+                    Terminal.log(f"ACK timeout from {client[0]}:{client[1]}", Terminal.CRITICAL_SYMBOL, "Handshake")
+                    retries -= 1
 
-                self.setTimeout(None)
-                return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_TIMEOUT)
+            Terminal.log(f"No ACK received from {client[0]}:{client[1]}", Terminal.CRITICAL_SYMBOL, "Handshake")
+            self.setTimeout(None)
+            return OncomingConnection(False, client_address, 0, 0, OncomingConnection.ERR_TIMEOUT)
 
     def requestTeardown(self, to_ip: str, to_port: int, fin_seq_num: int):
         self.setTimeout(Config.TEARDOWN_TIMEOUT)
@@ -260,7 +268,7 @@ class TCPConnection(Connection):
                 # print("Assumed unsuccessful")
                 return OncomingConnection(False, None, 0, 0, OncomingConnection.ERR_TIMEOUT), None
 
-    def goBackNSendFrame(self, message: MessageInfo) :
+    def goBackNSendFrame(self, message: MessageInfo, window: List[int]) :
         previousTimeout = self.socket.gettimeout()
         self.setTimeout(Config.RETRANSMIT_TIMEOUT)
 
@@ -285,92 +293,99 @@ class TCPConnection(Connection):
         except TimeoutError:
                 print("Timeout happened at sequence: ", message.segment.seq_num)
                 self.setTimeout(previousTimeout)
-                raise TimeoutError(message.segment.seq_num)
+                window.append(message.segment.seq_num)
 
     def sendGoBackN(self, messages: List[Segment], ip : str, port : int) -> OncomingConnection:
+        import time
         SWS = Config.WINDOW_SIZE
         # retries = Config.SEND_RETRIES
 
         # done = False
         threads = []
+        window = []
 
         LAR = 0
         LFS = 0
+        offset = messages[0].seq_num
+        print("m1 seqnum:", messages[0].seq_num)
+
         while True:
-            try:
-                i = 0
-                while LFS - LAR <= SWS and LFS < len(messages):
-                    thread = Thread(target=self.goBackNSendFrame, args=[
-                        MessageInfo(
-                            ip,
-                            port,
-                            messages[LFS + i]
-                        )
-                    ])
-                    threads.append(thread)
-                    thread.start()
-                    i += 1
-                    LFS = LAR + i
+            # try:
 
-                for thread in threads:
-                    thread.join()
+            # print("LFS:", LFS)
+            # print("LAR:", LAR)
+            while LFS - LAR <= SWS and LFS < len(messages):
+                # print("Sending data")
+                print("message index:", LFS)
 
-                LAR = LFS
+                thread = Thread(target=self.goBackNSendFrame, args=[
+                    MessageInfo(
+                        ip,
+                        port,
+                        messages[LFS]
+                    ),
+                    window
+                ])
+
+                threads.append(thread)
+                thread.start()
                 LFS += 1
 
-                if LFS >= len(messages):
-                    last_message = messages[len(messages) - 1]
-                    return OncomingConnection(True, (ip, port), last_message.ack_num, last_message.ack_num + 1)
-            except TimeoutError as e:
-                LAR = int(e)
+            print("Waiting for frames")
+            for thread in threads:
+                thread.join()
+
+            LAR = LFS
+
+            print("Window ", window)
+
+            if(len(window) != 0):
+                minimum = min(window) - offset
+                window.clear()
+                print("Lar is now ", minimum)
+                LAR = minimum
+                LFS = minimum
+                continue
+
+            if LFS >= len(messages):
+                print("Done!")
+                last_message = messages[len(messages) - 1]
+                return OncomingConnection(True, (ip, port), last_message.ack_num, last_message.ack_num + 1)
+            # except TimeoutError as e:
+            #     minimum = min(window)
+            #     window.clear
+            #     print("Lar is now ", minimum)
+            #     LAR = minimum
 
     def receiveGoBackN(self, oncomingConnection: OncomingConnection, timeout: int = 30,) -> (OncomingConnection, Segment):
         self.setTimeout(timeout)
 
-        RWS = Config.WINDOW_SIZE
-
-        LFR = oncomingConnection.seq_num
-        LAF = oncomingConnection.seq_num + 1
-
-        init = 1
-
         buffer = []
-        buffer_per_window = []
 
-        while True:
-            try :
-                if init == 1:
-                    response, client_address = self.listen()
-                    data, checksum = Segment.unpack(response)
-                    LFR = data.seq_num
-                    LAF = data.seq_num + 1
-                    init = 0
+        # while True:
+        last_ack = oncomingConnection.ack_num
+        try :
+            i = 0
 
+            while True: # TODO: EOF?
                 response, client_address = self.listen()
                 data, checksum = Segment.unpack(response)
-                print("Masuk bang")
-                print(checksum)
-                segment = Segment(data.flags, data.seq_num, data.ack_num, data.payload)
-                i = 0
-                while LAF - LFR <= RWS and segment.seq_num == LAF:
-                    if not (segment.is_valid_checksum()):
-                        Terminal.log(f"Received bad data from {client_address[0]}:{client_address[1]}",
-                                     Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
-                        self.send(Segment.ack(data.ack_num, data.seq_num + 1).pack(), client_address[0],
-                                  client_address[1])
-                        Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL,
-                                     f"INCOMING NUM={data.ack_num}")
-                        continue
+                print("in seq_num:", data.seq_num)
+                print("in ack_num:", data.ack_num)
+            
+                if not (data.is_valid_checksum()):
+                    Terminal.log(f"Received bad data from {client_address[0]}:{client_address[1]}",
+                                    Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
+                    continue
 
-                    if LFR < data.seq_num <= LAF:
-                        buffer_per_window.append(segment)
-                        LAF = LFR + i
+                if data.seq_num == last_ack:
+                    last_ack += 1
+                    self.send(Segment.ack(data.ack_num, last_ack).pack(), client_address[0],
+                                            client_address[1])
+                    Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.INFO_SYMBOL,
+                                    f"INCOMING NUM={data.ack_num}")
+            
+                    buffer.append(data)
 
-                buffer_per_window.sort(key=lambda buff:buff.seq_num)
-                buffer += [buff for buff in buffer_per_window]
-
-                LFR = LAF
-                LAF += 1
-
-            except struct.error as e:
-                print(e)
+        except struct.error as e:
+            print(e)

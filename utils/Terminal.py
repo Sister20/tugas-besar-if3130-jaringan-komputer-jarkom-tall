@@ -2,6 +2,7 @@ class Terminal:
     ALERT_SYMBOL = "[!]"
     CRITICAL_SYMBOL = "[!!]"
     INPUT_SYMBOL = "[?]"
+    INFO_SYMBOL = "[i]"
 
     @staticmethod
     def input(message: str, descriptor: str = None):
