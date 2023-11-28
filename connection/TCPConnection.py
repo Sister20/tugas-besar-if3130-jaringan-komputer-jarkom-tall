@@ -13,6 +13,7 @@ from connection.Connection import Connection
 from connection.OncomingConnection import OncomingConnection
 from random import randint
 import math
+from file.FileMark import FileMark
 
 class TCPConnection(Connection):
     def __init__(self, ip: str, port: int, handler: callable = None) -> None:
@@ -89,7 +90,7 @@ class TCPConnection(Connection):
             client = client_address
 
             self.setTimeout(Config.HANDSHAKE_TIMEOUT)
-            
+
             retries = Config.SEND_RETRIES
             while retries > 0:
                 try:
@@ -183,7 +184,7 @@ class TCPConnection(Connection):
     def sendStopNWait(self, message: MessageInfo) -> OncomingConnection:
         previousTimeout = self.socket.gettimeout()
         self.setTimeout(Config.RETRANSMIT_TIMEOUT)
-        
+
         Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={message.segment.seq_num}")
         retries = Config.SEND_RETRIES
         while retries > 0:
@@ -201,7 +202,7 @@ class TCPConnection(Connection):
                                 Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
                                 self.setTimeout(previousTimeout)
                                 return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1)
-                            
+
                     except struct.error as e:
                         print(e)
 
@@ -253,7 +254,7 @@ class TCPConnection(Connection):
 
                 # elif (client_address == saved_response[1]):
                 #     return OncomingConnection(True, client_address, data.ack_num, data.seq_num + 1), saved_response[0].unpack().payload
-                        
+
             except struct.error as e:
                 print(e)
 
@@ -372,7 +373,7 @@ class TCPConnection(Connection):
                 data, checksum = Segment.unpack(response)
                 print("in seq_num:", data.seq_num)
                 print("in ack_num:", data.ack_num)
-            
+
                 if not (data.is_valid_checksum()):
                     Terminal.log(f"Received bad data from {client_address[0]}:{client_address[1]}",
                                     Terminal.ALERT_SYMBOL, f"INCOMING NUM={data.ack_num}")
@@ -384,8 +385,13 @@ class TCPConnection(Connection):
                                             client_address[1])
                     Terminal.log(f"Sending ACK from {client_address[0]}:{client_address[1]}", Terminal.INFO_SYMBOL,
                                     f"INCOMING NUM={data.ack_num}")
-            
-                    buffer.append(data)
+
+                    # if not metadata
+                    if (data.flags != (SegmentFlag.FLAG_RST | SegmentFlag.FLAG_FIN)):
+                        buffer.append(data)
+                    else:
+                        metadata = data.payload.decode().split(FileMark.METADATA)
+                        Terminal.log(f'Received file metadata: name = {metadata[0]}, extension = {metadata[1]}, size = {metadata[2]}', Terminal.INFO_SYMBOL)
 
         except struct.error as e:
             print(e)
