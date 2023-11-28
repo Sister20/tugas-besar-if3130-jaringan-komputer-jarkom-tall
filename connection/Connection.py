@@ -56,7 +56,7 @@ class Connection:
 
                 
                 if(len(self.connection_buffer) > Config.GARBAGE_LIMIT):
-                    self.set_garbage_collection_time(0.01)
+                    self.set_garbage_collection_time(0.1)
                 else:
                     self.set_garbage_collection_time(Config.GARBAGE_COLLECTION_TIME)
 

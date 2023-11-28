@@ -102,7 +102,7 @@ class TCPConnection(Connection):
                 
                 return OncomingConnection(True, (ack_message.ip, ack_message.port), ack_message.segment.ack_num, ack_message.segment.seq_num + 1)
 
-            except TimeoutError:
+            except TimeoutError as e:
                 Terminal.log(f"ACK timeout from {ack_message.ip}:{ack_message.port}", Terminal.CRITICAL_SYMBOL, "Handshake")
                 retries -= 1
 
