@@ -126,18 +126,10 @@ class Server(Node):
         if(self.output_file is not None): self.output_file.close()
         self.connection.close()
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Client')
-    parser.add_argument('port', type=int, default="", help='Application port')
-    args = parser.parse_args()
+parser = argparse.ArgumentParser(description='Client')
+parser.add_argument('port', type=int, default="", help='Application port')
+args = parser.parse_args()
 
-    print("Starting main")
-    server = Server("test.png", port=args.port)
-    server.run()
-
-    try:
-        while server.running:
-            pass
-    except KeyboardInterrupt:
-        Terminal.log("Keyboard interrupt received. Stopping", Terminal.CRITICAL_SYMBOL)
-        server.stop()
+print("Starting main")
+server = Server("test.png", port=args.port)
+server.run()

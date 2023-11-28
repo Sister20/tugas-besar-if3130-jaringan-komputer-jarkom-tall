@@ -54,4 +54,4 @@ args = parser.parse_args()
 
 print("Starting main in client")
 client = Client(args.output_file_path, port=args.port, server_port=args.server_port)
-client.start()
+client.run()

@@ -106,4 +106,4 @@ args = parser.parse_args()
 
 print("Starting main in tictactoe")
 client = Tictactoe('0.0.0.0', args.port, args.server_port)
-client.start()
+client.run()
