@@ -238,6 +238,8 @@ class TCPConnection(Connection):
             print(f"Offset for {ip}:{port} is {offset}")
             while LFS - LAR <= SWS and LFS < len(messages):
 
+                time.sleep(0.05)
+
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(
                         ip,
