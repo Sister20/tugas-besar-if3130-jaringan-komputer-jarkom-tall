@@ -9,8 +9,8 @@ class ReceiverFile:
         try:
             return open(self.path, 'wb')
         except FileNotFoundError:
-            Terminal.log(f'File not found: {self.path}')
-            Terminal.log('Exiting program...')
+            Terminal.log(f'File not found: {self.path}', Terminal.INFO_SYMBOL)
+            Terminal.log('Exiting program...', Terminal.INFO_SYMBOL)
             exit(1)
 
     def write(self, payload: bytes) -> None:

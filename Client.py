@@ -26,7 +26,9 @@ class Client(Node):
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
             print("Listening")
-            self.connection.receiveGoBackN(response)
+            response, buffer = self.connection.receiveGoBackN(response)
+            for buff in buffer:
+                self.output_file.write(buff)
         else:
             if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
@@ -44,7 +46,7 @@ class Client(Node):
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client("Out.png")
+    client = Client("Out.txt")
     Thread(target=client.run).start()
 
     try:
