@@ -21,8 +21,12 @@ class Client(Node):
         self.output_file = ReceiverFile(output_file_path)
 
     def run(self):
-        self.running = True
-        response: OncomingConnection = self.connection.requestHandshake("<broadcast>", self.server_port)
+        self.connection.send("DISCOVER".encode(), "<broadcast>", self.server_port)
+        data, server_addr = self.connection.listen()
+        Terminal.log(f"Server found at {server_addr[0]}:{server_addr[1]}")
+
+        self.connection.setTimeout(None)
+        response: OncomingConnection = self.connection.acceptHandshake(server_addr)
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
             print("Listening")

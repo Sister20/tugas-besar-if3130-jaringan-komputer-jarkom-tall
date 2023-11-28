@@ -35,7 +35,7 @@ class TCPConnection(Connection):
                 while True:
                     Terminal.log("Waiting for response...", Terminal.ALERT_SYMBOL, "Handshake")
                     data, client_address = self.listen()
-                    if (client_address == ip_remote or ip_remote == '<broadcast>'):
+                    if (client_address == remote_address or ip_remote == '<broadcast>'):
                         try:
                             data, checksum = Segment.unpack(data)
                             #TODO: Checksum for SYN/ACK?
@@ -66,10 +66,15 @@ class TCPConnection(Connection):
         self.setTimeout(None)
         return OncomingConnection(False, (ip_remote, port_remote), 0, 0, OncomingConnection.ERR_TIMEOUT)
 
-    def acceptHandshake(self) -> OncomingConnection:
+    def acceptHandshake(self, target_address = None) -> OncomingConnection:
         seq_num = randint(0, 4294967295)
 
-        data, client_address = self.listen()
+        while True:
+            data, client_address = self.listen()
+            if(target_address != None and client_address != target_address):
+                return
+            else:
+                break
         try:
             data, checksum = Segment.unpack(data)
         except struct.error:
@@ -312,7 +317,7 @@ class TCPConnection(Connection):
             # print("LAR:", LAR)
             while LFS - LAR <= SWS and LFS < len(messages):
                 # print("Sending data")
-                time.sleep(0.1)
+                time.sleep(0.2)
 
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(

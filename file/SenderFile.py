@@ -92,8 +92,8 @@ class SenderFile:
             # Ex:
             # Handshake: seq num SYN => 0, seq num ACK => 1
             # First payload (idx 0) will be sent with seq num 1 + 0 + 1 = 2
-            self.segments[i].seq_num = handshake_seq_num + i
-            self.segments[i].ack_num = handshake_ack_num + i
+            self.segments[i].seq_num = handshake_seq_num + i + 1
+            self.segments[i].ack_num = handshake_ack_num + i + 1
 
     def close(self) -> None:
         self.file.close()
