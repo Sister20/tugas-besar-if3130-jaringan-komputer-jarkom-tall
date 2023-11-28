@@ -5,14 +5,13 @@ from message.MessageInfo import MessageInfo
 from message.Segment import Segment
 from connection.Connection import Connection
 from connection.TCPConnection import TCPConnection
-# from testing.TCPConnection2 import TCPConnection
 from connection.OncomingConnection import OncomingConnection
 from file.ReceiverFile import ReceiverFile
 from message.MessageQuery import MessageQuery
 
 
 class Client(Node):
-    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8082, server_port: int = 8000) -> None:
+    def __init__(self, output_file_path: str, ip: str = '0.0.0.0', port: int = 8081, server_port: int = 8000) -> None:
         super().__init__(TCPConnection(ip, port))
         self.connection: TCPConnection = self.connection
         self.ip: str = ip
@@ -47,7 +46,7 @@ class Client(Node):
 
 if __name__ == "__main__":
     print("Starting main in client")
-    client = Client("Out.png")
+    client = Client("Outb.png")
     Thread(target=client.run).start()
 
     try:

@@ -28,17 +28,38 @@ class Connection:
         self.listening: bool = False
         self.listener: Thread = Thread(target=self.listenerThread)
         self.garbage_collector: Thread = Thread(target=self.garbageThread)
+        self.garbage_collection_time = Config.GARBAGE_COLLECTION_TIME
+
+    def print_connection_buffer_seq_nums(self):
+        print("[", end="")
+        for messages in self.connection_buffer:
+            print(messages.segment.seq_num, end=",")
+        print("]")
+
+    def set_garbage_collection_time(self, new: int):
+        self.garbage_collection_time = new
+
+    def clean_queue(self):
+        self.connection_buffer.clear()
 
     def garbageThread(self):
         while self.listening:
             try:
                 initial_package = self.connection_buffer[0]
                 
-                time.sleep(Config.GARBAGE_COLLECTION_TIME)
+                time.sleep(self.garbage_collection_time)
 
+                print("Collecting Garbage")
+                self.print_connection_buffer_seq_nums()
                 if(initial_package == self.connection_buffer[0]):
-                    print("Garbage collected")
                     self.connection_buffer.pop(0)
+
+                
+                if(len(self.connection_buffer) > Config.GARBAGE_LIMIT):
+                    self.set_garbage_collection_time(0.01)
+                else:
+                    self.set_garbage_collection_time(Config.GARBAGE_COLLECTION_TIME)
+
             except IndexError as e:
                 pass
 
@@ -89,8 +110,9 @@ class Connection:
         else:
             while retval is None:
                 try:
-                    if(query.validate(self.connection_buffer[0])):
-                        retval = self.connection_buffer.pop(0)
+                    for i in range(len(self.connection_buffer)):
+                        if(query.validate(self.connection_buffer[i])):
+                            retval = self.connection_buffer.pop(i)
                 except IndexError:
                     pass
                 if (timeout and time.time() > limit): raise TimeoutError()

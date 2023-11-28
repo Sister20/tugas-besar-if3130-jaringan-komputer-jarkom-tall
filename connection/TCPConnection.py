@@ -227,8 +227,8 @@ class TCPConnection(Connection):
         last_ack = [offset]
 
         while True:
+            print(f"Offset for {ip}:{port} is {offset}")
             while LFS - LAR <= SWS and LFS < len(messages):
-                time.sleep(0.1)
 
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(
@@ -249,7 +249,7 @@ class TCPConnection(Connection):
 
             LFS = (last_ack[0] - offset) + 1
             print("LFS from last_ack is ", LFS)
-            print("Next we'll send: ", last_ack[0] + 1)
+            print("Next we'll send: ", last_ack[0] + 1, f" or as in index is {LFS}")
             LAR = LFS
 
             if LFS >= len(messages):
