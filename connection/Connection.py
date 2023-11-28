@@ -99,5 +99,7 @@ class Connection:
         # return self.socket.recvfrom(32768)
 
     def close(self) -> None:
-        self.socket.close()
-        self.stopListening()
+        try:
+            self.socket.close()
+        finally:
+            self.stopListening()

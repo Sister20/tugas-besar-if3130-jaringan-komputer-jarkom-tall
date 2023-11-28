@@ -30,22 +30,19 @@ class Client(Node):
         if (response.valid):
             Terminal.log(f"Connection Established", Terminal.ALERT_SYMBOL, "Handshake")
             print("Listening")
-            # response, buffer = self.connection.receiveGoBackN(response)
-            # for buff in buffer:
-            #     self.output_file.write(buff)
+            response, buffer = self.connection.receiveGoBackN(response)
+            for buff in buffer:
+                self.output_file.write(buff)
         else:
             if (response.error_code == OncomingConnection.ERR_TIMEOUT):
                 Terminal.log(f"Connection timeout! Shutting down...", Terminal.CRITICAL_SYMBOL, "Error")
+        print("Done")
         self.stop()
 
     def stop(self):
         self.running = False
         self.output_file.close()
         self.connection.close()
-
-    def handle_message(self, segment: Segment):
-        # TODO: Implement
-        pass
 
 
 if __name__ == "__main__":

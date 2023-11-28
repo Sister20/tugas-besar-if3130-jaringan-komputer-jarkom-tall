@@ -33,12 +33,6 @@ class Server(Node):
         self.connection.handler = self.print_connection_buffer
         self.connection.startListening()
         while self.running:
-            # try:
-            #     self.connection.listen(timeout=5)
-            # except TimeoutError as e:
-            #     print("Timeout!")
-            #     print(self.connection.connection_buffer)
-            # pass
             discover = self.connection.listen()
             self.connection.send(Segment(0, 0, 0, b'AVAILABLE').pack(), discover.ip, discover.port)
 
@@ -54,12 +48,13 @@ class Server(Node):
             print(self.client_list)
             for client_address in self.client_list:
                 connection: OncomingConnection = self.connection.requestHandshake(client_address[0], client_address[1])
-                # if (connection != None and connection.valid):
-                #     Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
-                #     self.send_file(connection)
-                #     # Thread(target=self.send_file, args=[connection]).start()
-                # else:
-                #     Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
+                if (connection != None and connection.valid):
+                    Terminal.log(f"Connection established with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
+                    self.send_file(connection)
+                    # Thread(target=self.send_file, args=[connection]).start()
+                else:
+                    Terminal.log(f"Failed to establish connection with {client_address[0]}:{client_address[1]}", Terminal.ALERT_SYMBOL, "Handshake")
+            print("Done")
             self.client_list.clear()
 
     def run(self):
@@ -71,11 +66,6 @@ class Server(Node):
         self.running = False
         self.file.close()
         self.connection.close()
-
-    def handle_message(self, segment: Segment):
-        # TODO: Implement
-        pass
-
 
 if __name__ == "__main__":
     print("Starting main in server")
