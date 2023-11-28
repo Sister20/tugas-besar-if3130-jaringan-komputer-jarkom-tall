@@ -22,7 +22,7 @@ class Connection:
         self.handler = handler
 
     def send(self, data: bytes, ip_remote: str, port_remote: int) -> None:
-        # if (randint(1, 10) > 4):
+        # if (randint(1, 10) == 1):
         #     print("Packet loss!!!")
         #     return
         remote_address = (ip_remote, port_remote)

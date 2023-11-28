@@ -268,10 +268,7 @@ class TCPConnection(Connection):
                 # print("Assumed unsuccessful")
                 return OncomingConnection(False, None, 0, 0, OncomingConnection.ERR_TIMEOUT), None
 
-    def goBackNSendFrame(self, message: MessageInfo, window: List[int]) :
-        previousTimeout = self.socket.gettimeout()
-        self.setTimeout(Config.RETRANSMIT_TIMEOUT)
-
+    def goBackNSendFrame(self, message: MessageInfo, last_ack: List[int]) :
         Terminal.log(f"Sending data reliably to {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={message.segment.seq_num}")
 
         try:
@@ -283,31 +280,29 @@ class TCPConnection(Connection):
                     data, checksum = Segment.unpack(response)
                     #TODO: Checksum for ACK?
                     if data.flags == SegmentFlag.FLAG_ACK:
-                        if data.ack_num == message.segment.seq_num + 1:
-                            Terminal.log(f"Received ACK from {message.ip}:{message.port}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
-                            self.setTimeout(previousTimeout)
+                        if(last_ack[0] < data.ack_num - 1): last_ack[0] = data.ack_num -1
+                        Terminal.log(f"Segment {message.segment.seq_num} received ACK from {message.ip}:{message.port} with ack {data.ack_num}, last ack is {last_ack[0]}", Terminal.ALERT_SYMBOL, f"OUTGOING NUM={data.ack_num}")
 
                 except struct.error as e:
                     print(e)
 
         except TimeoutError:
                 print("Timeout happened at sequence: ", message.segment.seq_num)
-                self.setTimeout(previousTimeout)
-                window.append(message.segment.seq_num)
 
     def sendGoBackN(self, messages: List[Segment], ip : str, port : int) -> OncomingConnection:
         import time
+        previousTimeout = self.socket.gettimeout()
+        self.setTimeout(Config.HANDSHAKE_TIMEOUT)
         SWS = Config.WINDOW_SIZE
         # retries = Config.SEND_RETRIES
 
         # done = False
         threads = []
-        window = []
 
         LAR = 0
         LFS = 0
         offset = messages[0].seq_num
-        print("m1 seqnum:", messages[0].seq_num)
+        last_ack = [offset]
 
         while True:
             # try:
@@ -316,7 +311,7 @@ class TCPConnection(Connection):
             # print("LAR:", LAR)
             while LFS - LAR <= SWS and LFS < len(messages):
                 # print("Sending data")
-                print("message index:", LFS)
+                # time.sleep(0.1)
 
                 thread = Thread(target=self.goBackNSendFrame, args=[
                     MessageInfo(
@@ -324,7 +319,7 @@ class TCPConnection(Connection):
                         port,
                         messages[LFS]
                     ),
-                    window
+                    last_ack
                 ])
 
                 threads.append(thread)
@@ -335,21 +330,15 @@ class TCPConnection(Connection):
             for thread in threads:
                 thread.join()
 
+            LFS = (last_ack[0] - offset) + 1
+            print("LFS from last_ack is ", LFS)
+            print("Next we'll send: ", last_ack[0] + 1)
             LAR = LFS
-
-            print("Window ", window)
-
-            if(len(window) != 0):
-                minimum = min(window) - offset
-                window.clear()
-                print("Lar is now ", minimum)
-                LAR = minimum
-                LFS = minimum
-                continue
 
             if LFS >= len(messages):
                 print("Done!")
                 last_message = messages[len(messages) - 1]
+                self.setTimeout(previousTimeout)
                 return OncomingConnection(True, (ip, port), last_message.ack_num, last_message.ack_num + 1)
             # except TimeoutError as e:
             #     minimum = min(window)
@@ -368,6 +357,7 @@ class TCPConnection(Connection):
             i = 0
 
             while True: # TODO: EOF?
+                print("Waiting for:", last_ack)
                 response, client_address = self.listen()
                 data, checksum = Segment.unpack(response)
                 print("in seq_num:", data.seq_num)
